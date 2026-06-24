@@ -1,0 +1,22 @@
+{
+  "week": "2-3",
+  "regime_validation": {
+    "events": {},
+    "state_distribution": {}
+  },
+  "feature_audit_path": "D:\\qbeast_tri_model\\results\\feature_audit.csv",
+  "svm_registry_path": "D:\\qbeast_tri_model\\results\\svm_registry_initial.pkl",
+  "symbols": [
+    "RELIANCE",
+    "HDFCBANK",
+    "BAJFINANCE",
+    "MARUTI",
+    "HEROMOTOCO",
+    "ABB",
+    "BOSCHLTD",
+    "MOTHERSON",
+    "BRITANNIA",
+    "INDIGO"
+  ],
+  "train_period": "2016-01-01 \u2192 2017-12-31 (HP search) | 2018-01-01 \u2192 2019-12-31 (OOS val)"
+}

@@ -1,351 +1,583 @@
 """
-QBEAST-AI.N  ·  models/svm/train.py
-=====================================
-SVM hyperparameter search and model training.
+models/svm/train.py
+===================
+SVM (RBF kernel) training with Optuna hyperparameter search and
+purged walk-forward cross-validation.
 
-Pipeline
---------
-1. For each symbol:
-   a. Load purged walk-forward CV splits (SVMDataLoader.build_hp_splits).
-   b. Run Optuna over (C, γ) search space — 30 trials, 5-fold purged CV.
-      Objective: mean balanced-accuracy across folds (weighted by class).
-   c. Refit final SVC on full train window (2016–2017) with best HP.
-   d. Evaluate on purged OOS val (2018–2019).
-   e. Save fitted model + HP record to artifacts/svm/.
+Week 2–3 deliverable per §2 of the QBEAST-AI.N architecture spec.
 
-Cap-segment HP ranges (from config):
-   Large-cap  C ∈ [10, 100],  γ ∈ [1e-4, 1.0]
-   Mid-cap    C ∈ [0.1, 10],  γ ∈ [1e-4, 1.0]
+Key design choices
+──────────────────
+• sklearn.svm.SVC with RBF kernel, class_weight='balanced' (fixed).
+• Optuna minimises negative F1 macro on the purged OOS fold.
+• Walk-forward CV: 5 folds, 30 trading-day purge + 10-day embargo.
+• FAST params (C, gamma): re-searched quarterly or on regime drift.
+• SLOW params (kernel, class_weight): fixed / re-searched semi-annually.
+• Cap-segment priors: LC symbols search C in [10, 100]; MC in [0.1, 10].
+• Expanding window refit on first trading day of each backtest month.
+• No look-ahead: training set always ends at prior month-end.
 
-HV regime modifier: if vol_band_2 (HV) dominates the train window,
-reduce C_high by 50% and γ_high by 50% for a smoother hyperplane.
-
-Usage (CLI)
------------
-    python -m models.svm.train                         # all 10 symbols
-    python -m models.svm.train --symbols RELIANCE HDFCBANK
-    python -m models.svm.train --symbols RELIANCE --trials 50
-
-Usage (Python)
---------------
-    from models.svm.train import SVMTrainer
-    trainer = SVMTrainer(config)
-    results = trainer.train_all()
+Transaction costs
+─────────────────
+Labels already include cost deduction (from features.py).
+Cost is baked into the label at feature-build time — not here.
 """
 
 from __future__ import annotations
 
-import argparse
-import json
 import logging
 import pickle
-import sys
-import time
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import optuna
-import yaml
-from sklearn.metrics import balanced_accuracy_score, classification_report
+import pandas as pd
+from sklearn.metrics import f1_score, classification_report
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
 
-optuna.logging.set_verbosity(optuna.logging.WARNING)
-
-_ROOT = Path(__file__).resolve().parent.parent.parent
-if str(_ROOT) not in sys.path:
-    sys.path.insert(0, str(_ROOT))
-
-from models.svm.features import SVMDataLoader
+from models.svm.features import build_svm_features, get_feature_columns
 
 logger = logging.getLogger(__name__)
+optuna.logging.set_verbosity(optuna.logging.WARNING)
+
+# ─────────────────────────────────────────────────────────────────────
+# Constants
+# ─────────────────────────────────────────────────────────────────────
+FEATURE_COLS    = get_feature_columns()
+PURGE_DAYS      = 30    # trading days
+EMBARGO_DAYS    = 10    # trading days
+N_CV_FOLDS      = 5
+LARGE_CAP_SYMS  = {"RELIANCE", "HDFCBANK", "BAJFINANCE", "MARUTI", "HEROMOTOCO"}
 
 
-class SVMTrainer:
+# ─────────────────────────────────────────────────────────────────────
+# Data containers
+# ─────────────────────────────────────────────────────────────────────
+
+@dataclass
+class SVMResult:
+    symbol: str
+    best_C: float
+    best_gamma: float
+    best_f1: float
+    val_f1: float
+    val_report: str
+    model: SVC
+    scaler: StandardScaler
+    train_end: str
+    hp_search_type: str   # 'full' | 'fast' | 'reuse'
+
+
+@dataclass
+class SVMRegistry:
+    """Holds the current best SVM model per symbol — updated monthly."""
+    models: Dict[str, SVMResult] = field(default_factory=dict)
+
+    def update(self, result: SVMResult) -> None:
+        self.models[result.symbol] = result
+
+    def get(self, symbol: str) -> Optional[SVMResult]:
+        return self.models.get(symbol)
+
+    def save(self, path: Path) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, "wb") as f:
+            pickle.dump(self, f)
+
+    @classmethod
+    def load(cls, path: Path) -> "SVMRegistry":
+        with open(path, "rb") as f:
+            return pickle.load(f)
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Purged walk-forward CV
+# ─────────────────────────────────────────────────────────────────────
+
+def _make_wf_splits(
+    dates: pd.DatetimeIndex,
+    n_folds: int = N_CV_FOLDS,
+    purge_days: int = PURGE_DAYS,
+    embargo_days: int = EMBARGO_DAYS,
+) -> List[Tuple[np.ndarray, np.ndarray]]:
     """
-    Per-symbol SVM trainer with Optuna HP search.
+    Generate purged walk-forward splits.
+
+    Each fold uses an expanding training window and a fixed-size OOS
+    validation window.  `purge_days` bars are dropped at the train/val
+    boundary to prevent label leakage through overlapping feature windows.
+    `embargo_days` are dropped at the start of the next fold's train set.
+
+    Returns list of (train_idx, val_idx) index arrays.
+    """
+    n = len(dates)
+    fold_size  = n // (n_folds + 1)
+    splits: List[Tuple[np.ndarray, np.ndarray]] = []
+
+    for k in range(1, n_folds + 1):
+        val_end   = min((k + 1) * fold_size, n)
+        val_start = k * fold_size
+        train_end = val_start - purge_days
+
+        if train_end <= 0 or val_start >= n:
+            continue
+
+        train_idx = np.arange(0, train_end)
+        val_idx   = np.arange(val_start, val_end)
+
+        # Embargo: remove first `embargo_days` of each next fold from
+        # training to prevent contamination from the previous fold's OOS
+        if k > 1:
+            train_idx = train_idx[train_idx >= embargo_days * (k - 1)]
+
+        splits.append((train_idx, val_idx))
+
+    logger.debug("Generated %d walk-forward folds.", len(splits))
+    return splits
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Optuna objective
+# ─────────────────────────────────────────────────────────────────────
+
+def _make_objective(
+    X: np.ndarray,
+    y: np.ndarray,
+    dates: pd.DatetimeIndex,
+    symbol: str,
+    c_low: float,
+    c_high: float,
+    gamma_low: float,
+    gamma_high: float,
+    fast_only: bool = False,
+) -> callable:
+    splits = _make_wf_splits(dates)
+
+    def objective(trial: optuna.Trial) -> float:
+        C     = trial.suggest_float("C",     c_low,     c_high,     log=True)
+        gamma = trial.suggest_float("gamma", gamma_low, gamma_high, log=True)
+
+        fold_scores = []
+        for train_idx, val_idx in splits:
+            X_tr, y_tr = X[train_idx], y[train_idx]
+            X_va, y_va = X[val_idx],   y[val_idx]
+
+            # Drop NaN labels and NaN features (defensive — X should
+            # already be NaN-free after the upstream filter in train_svm,
+            # but checking here too avoids a silent 1.0 fallback score).
+            tr_mask = ~np.isnan(y_tr) & ~np.isnan(X_tr).any(axis=1)
+            va_mask = ~np.isnan(y_va) & ~np.isnan(X_va).any(axis=1)
+            if tr_mask.sum() < 50 or va_mask.sum() < 10:
+                continue
+
+            scaler = StandardScaler()
+            X_tr_s = scaler.fit_transform(X_tr[tr_mask])
+            X_va_s = scaler.transform(X_va[va_mask])
+
+            clf = SVC(
+                C=C, gamma=gamma, kernel="rbf",
+                class_weight="balanced", cache_size=500,
+                random_state=42, max_iter=5000,
+            )
+            try:
+                clf.fit(X_tr_s, y_tr[tr_mask].astype(int))
+                preds = clf.predict(X_va_s)
+                score = f1_score(y_va[va_mask].astype(int), preds,
+                                 average="macro", zero_division=0)
+                fold_scores.append(score)
+            except Exception as e:
+                logger.debug("Trial fold failed: %s", e)
+                continue
+
+        return -np.mean(fold_scores) if fold_scores else 1.0  # minimise negative F1
+
+    return objective
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Public training function
+# ─────────────────────────────────────────────────────────────────────
+
+def train_svm(
+    symbol: str,
+    feature_df: pd.DataFrame,
+    train_start: str = "2016-01-01",
+    train_end:   str = "2019-12-31",
+    val_start:   str = "2018-01-01",
+    val_end:     Optional[str] = None,
+    n_trials: int = 50,
+    fast_only: bool = False,
+    prior_result: Optional[SVMResult] = None,
+    cfg: Optional[dict] = None,
+) -> SVMResult:
+    """
+    Train (or incrementally refit) the SVM for one symbol.
 
     Parameters
     ----------
-    config : dict
-        Parsed config.yaml.
-    artifacts_dir : str | Path | None
-        Override for artifacts/svm/. Uses config if None.
-    n_trials : int
-        Optuna trials per symbol (default from config: 30).
-    n_folds : int
-        Walk-forward CV folds (default from config: 5).
+    symbol       : NSE ticker string.
+    feature_df   : Output of build_svm_features() — 25 features + 'label'.
+    train_start  : Inclusive start date for training data.
+    train_end    : Inclusive end date for training data.
+    val_start    : Inclusive start date for the held-out OOS validation
+                   window. Independent of train_end — during the initial
+                   HP search, train_end is "2017-12-31" (in-sample) while
+                   validation runs 2018-2019, so these must NOT be tied
+                   together or the validation window collapses to empty.
+    val_end      : Inclusive end date for OOS validation. Defaults to
+                   "2019-12-31" (the initial-search OOS period) if not
+                   given. During the monthly backtest loop, pass the
+                   current month-end explicitly instead.
+    n_trials     : Number of Optuna trials.
+    fast_only    : If True, only tune C and gamma (FAST params);
+                   otherwise do full HP search.
+    prior_result : Previous SVMResult to fall back on if gate fails.
+    cfg          : Optional config dict (overrides module-level defaults).
+
+    Returns
+    -------
+    SVMResult with best model, scaler, and metrics.
     """
+    cfg = cfg or {}
+    c_low   = cfg.get("C_low",     0.01)
+    c_high  = cfg.get("C_high",    200.0)
+    g_low   = cfg.get("gamma_low", 1e-4)
+    g_high  = cfg.get("gamma_high",2.0)
 
-    def __init__(
-        self,
-        config: dict,
-        artifacts_dir: str | Path | None = None,
-        n_trials: Optional[int] = None,
-        n_folds: Optional[int] = None,
-    ):
-        self.cfg          = config
-        self.art_dir      = Path(artifacts_dir or config["paths"]["model_artifacts"]) / "svm"
-        self.n_trials     = n_trials or config["svm_hp"]["optuna_trials"]   # 30
-        self.n_folds      = n_folds  or config["svm_hp"]["cv_folds"]        # 5
-        self.loader       = SVMDataLoader(config)
-        self.symbols      = config["universe"]["all_symbols"]
-        self.lc_symbols   = set(config["universe"]["large_cap_symbols"])
-        self.results_: Dict[str, dict] = {}
+    # Cap-segment prior: narrow search range for large-caps
+    if symbol in LARGE_CAP_SYMS:
+        c_low  = max(c_low,  cfg.get("large_cap_C_min", 10.0))
+        c_high = min(c_high, cfg.get("large_cap_C_max", 100.0))
+    else:
+        c_low  = max(c_low,  cfg.get("mid_cap_C_min", 0.1))
+        c_high = min(c_high, cfg.get("mid_cap_C_max", 10.0))
 
-    # ── Public API ───────────────────────────────────────────────────────────
+    logger.info(
+        "[%s] SVM training: %s → %s | trials=%d | %s | C=[%.2f, %.2f]",
+        symbol, train_start, train_end, n_trials,
+        "fast" if fast_only else "full", c_low, c_high,
+    )
 
-    def train_symbol(self, symbol: str) -> dict:
-        """
-        Full HP search + final fit + OOS evaluation for one symbol.
+    # ── Slice training window ─────────────────────────────────────────
+    mask = (
+        (feature_df.index >= pd.Timestamp(train_start)) &
+        (feature_df.index <= pd.Timestamp(train_end))
+    )
+    df_train = feature_df.loc[mask].copy()
 
-        Returns
-        -------
-        dict with keys:
-            symbol, cap_segment, best_C, best_gamma, val_balanced_acc,
-            val_report, model_path, scaler_path, hp_path
-        """
-        t0 = time.time()
-        logger.info("══════  SVM: %s  ══════", symbol)
+    # Drop rows where the label is NaN (no forward-return target) AND
+    # rows where ANY feature is NaN. Feature NaNs come from rolling
+    # warm-up windows (252-day z-score, ATR-14, etc.) at the start of
+    # the series — these survive a label-only filter since the label
+    # is forward-looking and becomes valid well before the slowest
+    # feature's warm-up period ends. Letting them through silently
+    # corrupts every CV fold (StandardScaler/SVC on NaN) and crashes
+    # the final model.fit() call.
+    valid_mask = df_train["label"].notna() & df_train[FEATURE_COLS].notna().all(axis=1)
+    n_dropped_feat_nan = (df_train["label"].notna() & ~df_train[FEATURE_COLS].notna().all(axis=1)).sum()
+    if n_dropped_feat_nan > 0:
+        logger.info(
+            "[%s] Dropping %d rows with valid label but NaN feature(s) "
+            "(rolling-window warm-up period).", symbol, n_dropped_feat_nan,
+        )
+    df_train   = df_train.loc[valid_mask]
 
-        cap_seg    = self.loader.cap_segment(symbol)
-        C_low, C_high = self.loader.get_C_bounds(symbol)
-        g_low      = self.cfg["svm_hp"]["gamma_low"]
-        g_high     = self.cfg["svm_hp"]["gamma_high"]
+    if len(df_train) < 100:
+        raise ValueError(
+            f"[{symbol}] Insufficient training data: {len(df_train)} rows after filtering."
+        )
 
-        # ── Step 1: HP search via Optuna ────────────────────────────────────
-        splits = self.loader.build_hp_splits(symbol, n_folds=self.n_folds)
+    X = df_train[FEATURE_COLS].values.astype(np.float32)
+    y = df_train["label"].values.astype(float)
+    dates = df_train.index
 
-        # HV regime modifier: check if HV band dominates training data
-        feat_all, _ = self.loader.load_symbol(symbol)
-        train_feat  = feat_all.loc[
-            self.cfg["dates"]["hp_train_start"] : self.cfg["dates"]["hp_train_end"]
-        ]
-        hv_cols = [c for c in train_feat.columns if "vol_band_2" in c]
-        if hv_cols:
-            hv_ratio = float(train_feat[hv_cols[0]].mean())
-            if hv_ratio > 0.40:   # >40% of days in HV band
-                C_high  = C_high  * 0.5
-                g_high  = g_high  * 0.5
-                logger.info(
-                    "%s: HV ratio=%.1f%% → reducing C_high=%.1f  g_high=%.4f",
-                    symbol, hv_ratio * 100, C_high, g_high,
-                )
+    # ── Optuna study ──────────────────────────────────────────────────
+    study = optuna.create_study(
+        direction="minimize",
+        sampler=optuna.samplers.TPESampler(seed=42),
+        pruner=optuna.pruners.MedianPruner(n_startup_trials=5),
+    )
 
-        def objective(trial: optuna.Trial) -> float:
-            C     = trial.suggest_float("C",     C_low, C_high, log=True)
-            gamma = trial.suggest_float("gamma", g_low, g_high, log=True)
+    # Warm-start with prior best HP if available
+    if prior_result is not None and fast_only:
+        study.enqueue_trial({"C": prior_result.best_C, "gamma": prior_result.best_gamma})
 
-            model = SVC(
-                C=C, gamma=gamma,
-                kernel="rbf",
-                class_weight="balanced",
-                random_state=42,
-                cache_size=500,
+    objective = _make_objective(
+        X, y, dates, symbol, c_low, c_high, g_low, g_high, fast_only
+    )
+    study.optimize(objective, n_trials=n_trials, show_progress_bar=False)
+
+    best_C     = study.best_params["C"]
+    best_gamma = study.best_params["gamma"]
+    best_f1    = -study.best_value
+
+    logger.info("[%s] Best HP: C=%.4f, gamma=%.6f, CV F1=%.4f",
+                symbol, best_C, best_gamma, best_f1)
+
+    # ── Final model: retrain on full training window ──────────────────
+    valid_mask_np = ~np.isnan(y)
+    X_clean = X[valid_mask_np]
+    y_clean = y[valid_mask_np].astype(int)
+
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X_clean)
+
+    final_model = SVC(
+        C=best_C, gamma=best_gamma, kernel="rbf",
+        class_weight="balanced", probability=True,
+        cache_size=500, random_state=42, max_iter=10000,
+    )
+    final_model.fit(X_scaled, y_clean)
+
+    # ── Validation report on held-out OOS window ───────────────────────
+    # Spec requires a 30-trading-day purge gap between train_end and
+    # val_start (calendar-adjacent dates leak via rolling-window features
+    # that span the boundary, e.g. a 252-day z-score computed on
+    # 2018-01-01 still reaches back into December 2017 training data).
+    # Compute the purge using actual trading-day positions in the full
+    # index, not calendar days, since calendar-day counts don't match
+    # trading-day counts (weekends/holidays).
+    all_dates = feature_df.index.sort_values()
+    train_end_ts = pd.Timestamp(train_end)
+    pos_after_train_end = all_dates.searchsorted(train_end_ts, side="right")
+    purge_pos = pos_after_train_end + PURGE_DAYS
+    if purge_pos < len(all_dates):
+        purged_val_start_ts = all_dates[purge_pos]
+    else:
+        purged_val_start_ts = pd.Timestamp(val_start)
+
+    requested_val_start_ts = pd.Timestamp(val_start)
+    effective_val_start_ts = max(requested_val_start_ts, purged_val_start_ts)
+    if effective_val_start_ts > requested_val_start_ts:
+        logger.info(
+            "[%s] val_start pushed from %s to %s to enforce %d-day purge "
+            "gap after train_end=%s.",
+            symbol, val_start, effective_val_start_ts.date(), PURGE_DAYS, train_end,
+        )
+
+    val_end_resolved = val_end or "2019-12-31"
+    val_mask  = (
+        (feature_df.index >= effective_val_start_ts) &
+        (feature_df.index <= pd.Timestamp(val_end_resolved)) &
+        feature_df["label"].notna() &
+        feature_df[FEATURE_COLS].notna().all(axis=1)
+    )
+    val_df = feature_df.loc[val_mask]
+    val_f1 = 0.0
+    val_report = ""
+
+    if len(val_df) > 30:
+        X_val = scaler.transform(val_df[FEATURE_COLS].values.astype(np.float32))
+        y_val = val_df["label"].values.astype(int)
+        y_pred = final_model.predict(X_val)
+        val_f1 = f1_score(y_val, y_pred, average="macro", zero_division=0)
+        val_report = classification_report(y_val, y_pred,
+                                            target_names=["Sell", "Flat", "Buy"],
+                                            zero_division=0)
+        logger.info("[%s] Val F1 (OOS): %.4f", symbol, val_f1)
+    else:
+        logger.warning(
+            "[%s] OOS validation window %s→%s produced only %d rows "
+            "(need >30) — val_f1 left at 0.0, not a real measurement.",
+            symbol, val_start, val_end_resolved, len(val_df),
+        )
+
+    return SVMResult(
+        symbol       = symbol,
+        best_C       = best_C,
+        best_gamma   = best_gamma,
+        best_f1      = best_f1,
+        val_f1       = val_f1,
+        val_report   = val_report,
+        model        = final_model,
+        scaler       = scaler,
+        train_end    = train_end,
+        hp_search_type = "fast" if fast_only else "full",
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Monthly incremental refit (called by monthly_loop.py)
+# ─────────────────────────────────────────────────────────────────────
+
+def monthly_refit_svm(
+    symbol: str,
+    feature_df: pd.DataFrame,
+    registry: SVMRegistry,
+    current_month_end: str,
+    trigger_hp_search: bool = False,
+    cfg: Optional[dict] = None,
+) -> SVMResult:
+    """
+    Monthly incremental SVM refit on expanding window.
+
+    Logic:
+      - Always refit weights on expanding window (Jan 2016 → current_month_end).
+      - HP re-search (Optuna) only if `trigger_hp_search=True`
+        (quarterly calendar OR regime drift flag set).
+      - Otherwise reuse prior C, gamma and skip Optuna entirely.
+
+    Parameters
+    ----------
+    symbol           : NSE ticker.
+    feature_df       : Full feature matrix up to current_month_end.
+    registry         : SVMRegistry holding prior best result.
+    current_month_end: End date for training (prior month-end in backtest).
+    trigger_hp_search: True → run Optuna; False → reuse prior HP.
+
+    Returns
+    -------
+    Updated SVMResult (new weights, potentially new HP).
+    """
+    prior = registry.get(symbol)
+    cfg   = cfg or {}
+
+    n_trials = cfg.get("n_trials_fast", 30) if trigger_hp_search else 0
+
+    if trigger_hp_search or prior is None:
+        # OOS check window: trailing ~63 trading days (~90 calendar days)
+        # up to current_month_end, per the drift-sentinel spec (§3 step 05).
+        # Without this, train_svm would silently fall back to the stale
+        # 2018-2019 initial-search validation window every single month.
+        month_end_ts = pd.Timestamp(current_month_end)
+        val_start_roll = (month_end_ts - pd.Timedelta(days=90)).strftime("%Y-%m-%d")
+
+        result = train_svm(
+            symbol       = symbol,
+            feature_df   = feature_df,
+            train_start  = "2016-01-01",
+            train_end    = current_month_end,
+            val_start    = val_start_roll,
+            val_end      = current_month_end,
+            n_trials     = n_trials if n_trials > 0 else 30,
+            fast_only    = True,
+            prior_result = prior,
+            cfg          = cfg,
+        )
+    else:
+        # Reuse prior HP — just refit on expanded data
+        logger.info("[%s] Monthly refit: reusing HP C=%.4f gamma=%.6f | end=%s",
+                    symbol, prior.best_C, prior.best_gamma, current_month_end)
+
+        mask = (
+            (feature_df.index >= pd.Timestamp("2016-01-01")) &
+            (feature_df.index <= pd.Timestamp(current_month_end)) &
+            feature_df["label"].notna() &
+            feature_df[FEATURE_COLS].notna().all(axis=1)
+        )
+        df_tr  = feature_df.loc[mask]
+        X      = df_tr[FEATURE_COLS].values.astype(np.float32)
+        y      = df_tr["label"].values.astype(int)
+
+        scaler = StandardScaler()
+        X_s    = scaler.fit_transform(X)
+
+        model = SVC(
+            C=prior.best_C, gamma=prior.best_gamma, kernel="rbf",
+            class_weight="balanced", probability=True,
+            cache_size=500, random_state=42, max_iter=10000,
+        )
+        model.fit(X_s, y)
+
+        result = SVMResult(
+            symbol         = symbol,
+            best_C         = prior.best_C,
+            best_gamma     = prior.best_gamma,
+            best_f1        = prior.best_f1,
+            val_f1         = prior.val_f1,
+            val_report     = prior.val_report,
+            model          = model,
+            scaler         = scaler,
+            train_end      = current_month_end,
+            hp_search_type = "reuse",
+        )
+
+    registry.update(result)
+    return result
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Initial HP search: Jan 2016 – Dec 2019 for all symbols
+# ─────────────────────────────────────────────────────────────────────
+
+def run_initial_hp_search(
+    all_features: Dict[str, pd.DataFrame],
+    output_dir: Path,
+    cfg: Optional[dict] = None,
+) -> SVMRegistry:
+    """
+    Run full Optuna HP search for all 10 symbols on 2016–2019 data.
+    This is the Week 2–3 deliverable.
+
+    Parameters
+    ----------
+    all_features : {symbol: feature_df} from build_svm_features().
+    output_dir   : Where to save SVMRegistry pickle.
+    cfg          : Config dict.
+
+    Returns
+    -------
+    SVMRegistry populated with initial best results for all symbols.
+    """
+    cfg = cfg or {}
+    registry = SVMRegistry()
+
+    for symbol, feat_df in all_features.items():
+        logger.info("=" * 60)
+        logger.info("[%s] Starting initial HP search (2016–2019)", symbol)
+        try:
+            result = train_svm(
+                symbol      = symbol,
+                feature_df  = feat_df,
+                train_start = "2016-01-01",
+                train_end   = "2017-12-31",   # HP search in-sample
+                n_trials    = cfg.get("n_trials_full", 50),
+                fast_only   = False,
+                cfg         = cfg,
             )
+            registry.update(result)
+            logger.info(
+                "[%s] ✓ HP search complete | C=%.4f | gamma=%.6f | "
+                "CV F1=%.4f | Val F1=%.4f",
+                symbol, result.best_C, result.best_gamma,
+                result.best_f1, result.val_f1,
+            )
+        except Exception as e:
+            logger.error("[%s] HP search FAILED: %s", symbol, e, exc_info=True)
 
-            fold_scores = []
-            for X_tr, y_tr, X_vl, y_vl in splits:
-                scaler = StandardScaler()
-                X_tr_s = scaler.fit_transform(X_tr)
-                X_vl_s = scaler.transform(X_vl)
-                model.fit(X_tr_s, y_tr)
-                preds  = model.predict(X_vl_s)
-                score  = balanced_accuracy_score(y_vl, preds)
-                fold_scores.append(score)
+    # Save registry
+    out_path = output_dir / "svm_registry_initial.pkl"
+    registry.save(out_path)
+    logger.info("SVMRegistry saved → %s", out_path)
 
-            return float(np.mean(fold_scores))
-
-        study = optuna.create_study(
-            direction="maximize",
-            sampler=optuna.samplers.TPESampler(seed=42),
-            study_name=f"svm_{symbol}",
-        )
-        study.optimize(objective, n_trials=self.n_trials, show_progress_bar=False)
-
-        best_C     = study.best_params["C"]
-        best_gamma = study.best_params["gamma"]
-        best_cv    = study.best_value
-
-        logger.info(
-            "%s: HP search done  best_C=%.4f  best_gamma=%.6f  cv_bal_acc=%.4f",
-            symbol, best_C, best_gamma, best_cv,
-        )
-
-        # ── Step 2: Final fit on full train window ───────────────────────────
-        X_train, y_train, X_val, y_val = self.loader.build_initial_train_val(symbol)
-
-        scaler  = StandardScaler()
-        X_tr_s  = scaler.fit_transform(X_train)
-        X_val_s = scaler.transform(X_val)
-
-        final_model = SVC(
-            C=best_C,
-            gamma=best_gamma,
-            kernel="rbf",
-            class_weight="balanced",
-            random_state=42,
-            cache_size=500,
-            probability=True,    # enable predict_proba for soft signals
-        )
-        final_model.fit(X_tr_s, y_train)
-
-        # ── Step 3: OOS evaluation (2018–2019, purged) ─────────────────────
-        val_preds     = final_model.predict(X_val_s)
-        val_bal_acc   = balanced_accuracy_score(y_val, val_preds)
-        val_report    = classification_report(
-            y_val, val_preds,
-            target_names=["Sell(-1)", "Flat(0)", "Buy(+1)"],
-            output_dict=True,
-            zero_division=0,
-        )
-
-        logger.info(
-            "%s: OOS val  bal_acc=%.4f  buy_f1=%.3f  sell_f1=%.3f",
-            symbol,
-            val_bal_acc,
-            val_report.get("Buy(+1)", {}).get("f1-score", 0.0),
-            val_report.get("Sell(-1)", {}).get("f1-score", 0.0),
-        )
-
-        # ── Step 4: Save artefacts ──────────────────────────────────────────
-        self.art_dir.mkdir(parents=True, exist_ok=True)
-
-        model_path  = self.art_dir / f"{symbol}_svm.pkl"
-        scaler_path = self.art_dir / f"{symbol}_scaler.pkl"
-        hp_path     = self.art_dir / f"{symbol}_hp.json"
-
-        with open(model_path,  "wb") as f: pickle.dump(final_model, f)
-        with open(scaler_path, "wb") as f: pickle.dump(scaler, f)
-
-        hp_record = {
-            "symbol":       symbol,
-            "cap_segment":  cap_seg,
-            "best_C":       best_C,
-            "best_gamma":   best_gamma,
-            "cv_bal_acc":   best_cv,
-            "val_bal_acc":  val_bal_acc,
-            "n_trials":     self.n_trials,
-            "n_folds":      self.n_folds,
-            "C_search_range":     [C_low, C_high],
-            "gamma_search_range": [g_low, g_high],
-            "train_rows":   int(X_train.shape[0]),
-            "val_rows":     int(X_val.shape[0]),
-            "val_report":   val_report,
-            "elapsed_s":    round(time.time() - t0, 1),
-        }
-        with open(hp_path, "w") as f:
-            json.dump(hp_record, f, indent=2)
-
-        logger.info(
-            "%s: saved model→%s  scaler→%s  hp→%s  (%.1fs)",
-            symbol, model_path.name, scaler_path.name, hp_path.name,
-            time.time() - t0,
-        )
-
-        self.results_[symbol] = hp_record
-        return hp_record
-
-    def train_all(
-        self,
-        symbols: Optional[List[str]] = None,
-    ) -> Dict[str, dict]:
-        """
-        Train SVM for all symbols (or a subset).
-
-        Returns
-        -------
-        dict: symbol → result dict
-        """
-        targets = symbols or self.symbols
-        t0      = time.time()
-
-        logger.info(
-            "╔══════════════════════════════════════════════════════╗"
-        )
-        logger.info(
-            "║   QBEAST-AI.N  ·  SVM Training  ·  %d symbols       ║",
-            len(targets),
-        )
-        logger.info(
-            "╚══════════════════════════════════════════════════════╝"
-        )
-
-        for sym in targets:
-            try:
-                self.train_symbol(sym)
-            except Exception as e:
-                logger.error("FAILED %s: %s", sym, e, exc_info=True)
-
-        # Save combined summary
-        summary_path = self.art_dir / "svm_training_summary.json"
-        with open(summary_path, "w") as f:
-            json.dump(self.results_, f, indent=2)
-
-        elapsed = time.time() - t0
-        logger.info(
-            "SVM training complete: %d/%d symbols  %.1fs total",
-            len(self.results_), len(targets), elapsed,
-        )
-        logger.info("Summary → %s", summary_path)
-        return self.results_
-
-    @staticmethod
-    def load_model(symbol: str, artifacts_dir: str | Path) -> Tuple:
-        """
-        Load a saved SVM model + scaler for inference.
-
-        Returns
-        -------
-        (model, scaler)
-        """
-        art_dir     = Path(artifacts_dir) / "svm"
-        model_path  = art_dir / f"{symbol}_svm.pkl"
-        scaler_path = art_dir / f"{symbol}_scaler.pkl"
-
-        with open(model_path,  "rb") as f: model  = pickle.load(f)
-        with open(scaler_path, "rb") as f: scaler = pickle.load(f)
-        return model, scaler
+    # Print summary table
+    _print_summary(registry)
+    return registry
 
 
-# ── CLI ──────────────────────────────────────────────────────────────────────
+def _print_summary(registry: SVMRegistry) -> None:
+    """Pretty-print the HP search summary table."""
+    rows = []
+    for sym, res in registry.models.items():
+        cap = "LC" if sym in LARGE_CAP_SYMS else "MC"
+        rows.append({
+            "Symbol":       sym,
+            "Cap":          cap,
+            "C":            f"{res.best_C:.4f}",
+            "gamma":        f"{res.best_gamma:.6f}",
+            "CV F1 (macro)":f"{res.best_f1:.4f}",
+            "Val F1 (OOS)": f"{res.val_f1:.4f}",
+            "HP Type":      res.hp_search_type,
+            "Train end":    res.train_end,
+        })
 
-def _parse_args() -> argparse.Namespace:
-    p = argparse.ArgumentParser(
-        description="QBEAST-AI.N · SVM HP Search + Training",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-    )
-    p.add_argument("--config",    type=str, default="config.yaml")
-    p.add_argument("--symbols",   nargs="+", default=None,
-                   help="Symbols to train (default: all 10)")
-    p.add_argument("--trials",    type=int, default=None,
-                   help="Optuna trials per symbol (default: from config)")
-    p.add_argument("--folds",     type=int, default=None,
-                   help="CV folds (default: from config)")
-    p.add_argument("--log-level", type=str, default="INFO",
-                   choices=["DEBUG", "INFO", "WARNING", "ERROR"])
-    return p.parse_args()
-
-
-def main() -> None:
-    args = _parse_args()
-    logging.basicConfig(
-        level=getattr(logging, args.log_level),
-        format="%(asctime)s  %(levelname)-8s  %(name)s  %(message)s",
-        datefmt="%H:%M:%S",
-    )
-
-    with open(args.config) as f:
-        config = yaml.safe_load(f)
-
-    trainer = SVMTrainer(
-        config,
-        n_trials=args.trials,
-        n_folds=args.folds,
-    )
-    trainer.train_all(symbols=args.symbols)
-
-
-if __name__ == "__main__":
-    main()
+    df = pd.DataFrame(rows)
+    logger.info("\n%s", df.to_string(index=False))
+    print("\n" + "═" * 80)
+    print("SVM Initial HP Search Results — QBEAST-AI.N Week 2–3")
+    print("═" * 80)
+    print(df.to_string(index=False))
+    print("═" * 80 + "\n")

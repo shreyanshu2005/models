@@ -1,268 +1,164 @@
-# ============================================================
-# QBEAST-AI.N  ·  Global Configuration
-# Three-Model Quant Pipeline: SVM + CNN-LSTM + SAC
-# ============================================================
-
+# QBEAST-AI.N — Central configuration
+# All monetary constants, dates, symbols, and HP search spaces live here.
+# -----------------------------------------------------------------------
 # ── Project identity ────────────────────────────────────────
 project:
   name: "QBEAST-AI.N"
   version: "1.0.0"
   description: "3-Model Quant Pipeline: SVM + CNN-LSTM + SAC on 10 NSE EOD symbols"
 
-# ── Universe ────────────────────────────────────────────────
+# ── Universe ──────────────────────────────────────────────────────────
 universe:
   symbols:
-    large_cap:
-      - RELIANCE    # Energy
-      - HDFCBANK    # Banking
-      - BAJFINANCE  # NBFC
-      - MARUTI      # Auto
-      - HEROMOTOCO  # Auto
-    mid_cap:
-      - BRITANNIA   # FMCG
-      - BOSCHLTD    # Auto Ancillary
-      - MOTHERSON   # Auto Ancillary
-      - ABB         # Capital Goods
-      - INDIGO      # Aviation
-
-  all_symbols:
-    - RELIANCE
-    - HDFCBANK
-    - BAJFINANCE
-    - MARUTI
-    - HEROMOTOCO
-    - BRITANNIA
-    - BOSCHLTD
-    - MOTHERSON
-    - ABB
-    - INDIGO
-
-  large_cap_symbols:
-    - RELIANCE
-    - HDFCBANK
-    - BAJFINANCE
-    - MARUTI
-    - HEROMOTOCO
-
-  mid_cap_symbols:
-    - BRITANNIA
-    - BOSCHLTD
-    - MOTHERSON
-    - ABB
-    - INDIGO
-
-# ── Dates ───────────────────────────────────────────────────
-dates:
-  universe_start: "2016-01-01"     # Align all 10 (INDIGO from Nov 2015)
-  hmm_warmup_start: "2010-01-01"   # NIFTY50 HMM warmup begins here
-
-  # Initial HP search split
-  hp_train_start: "2016-01-01"
-  hp_train_end:   "2017-12-31"
-
-  # Walk-forward validation (OOS, purged)
-  val_start: "2018-01-01"
-  val_end:   "2019-12-31"
-
-  # Live backtest
+    large_cap: [RELIANCE, HDFCBANK, BAJFINANCE, MARUTI, HEROMOTOCO]
+    mid_cap:   [ABB, BOSCHLTD, MOTHERSON, BRITANNIA, INDIGO]
+  universe_start: "2016-01-01"
+  train_end:      "2019-12-31"
   backtest_start: "2020-01-01"
-  backtest_end:   "2026-06-22"
+  backtest_end:   "2026-06-30"
 
-# ── Data paths ──────────────────────────────────────────────
-paths:
-  raw_data:       "data/raw"
-  processed_data: "data/processed"
-  regime_data:    "data/regime"
-  results:        "results"
-  model_artifacts: "artifacts"
-
-  nifty50_files:
-    - "data/raw/NIFTY50_Benchmark_20091231_20040101.csv"
-    - "data/raw/NIFTY50_Benchmark_20141231_20100101.csv"
-    - "data/raw/NIFTY50_Benchmark_20191231_20150101.csv"
-    - "data/raw/NIFTY50_Benchmark_20260622_20200101.csv"
-
-# ── Transaction cost constants ───────────────────────────────
+# ── Transaction cost constants ─────────────────────────────────────────
 costs:
-  # Per-leg all-in cost: STT + brokerage + stamp + exchange charges
-  tx_rate_per_leg: 0.0011      # 0.11% per leg; round-trip ~0.22%
+  tx_rate_per_leg:  0.0011   # 0.11 % of trade value, deducted on BOTH buy AND sell
+  stcg_rate:        0.20     # 20 % on net realised gains within holding year
+  risk_free_annual: 0.065    # 91-day Indian T-bill approximation
 
-  # Short-term capital gains tax rate (< 12 months holding)
-  stcg_rate: 0.20              # 20% on net realised annual gains
+# ── Data paths ────────────────────────────────────────────────────────
+paths:
+  raw_data:      "data/raw"
+  processed:     "data/processed"
+  regime_out:    "data/regime"
+  results:       "results"
+  models_dir:    "models"
 
-  # Annual risk-free rate for Sharpe computation (91-day T-bill proxy)
-  risk_free_annual: 0.065      # 6.5% p.a.
+# ── Calendar / purging ────────────────────────────────────────────────
+calendar:
+  purge_days:         30    # trading-day purge gap between train-end and val-start
+  embargo_days:       10    # additional days embargoed after each fold end
+  walk_forward_days:  21    # one calendar month ≈ 21 trading days
 
-# ── Position sizing limits ──────────────────────────────────
-position_limits:
-  # Max fraction of portfolio per name
-  large_cap_max: 0.30    # RELIANCE, HDFCBANK, BAJFINANCE, MARUTI, HEROMOTOCO
-  mid_cap_max:   0.20    # ABB, BOSCHLTD, MOTHERSON, BRITANNIA, INDIGO
-
-  # Override during HV vol regime (all caps reduced)
-  hv_reduction_factor: 0.67  # e.g. 30% → 20%
-
-# ── Regime engine (HMM) ─────────────────────────────────────
+# ── Regime engine (HMM + Vol band) ───────────────────────────────────
 regime:
-  n_states: 5
-  state_labels:
-    0: "Rising"
-    1: "Rally"
-    2: "Sideways"
-    3: "Falling"
-    4: "Crashing"
+  n_states:              5        # Rising=0, Rally=1, Sideways=2, Falling=3, Crashing=4
+  hmm_kappa:             10       # sticky self-transition prior
+  hmm_features:          [log_return, realized_vol_20d, momentum_z_10d]
+  hmm_warmup_start:      "2010-01-01"
+  hmm_initial_fit_end:   "2019-12-31"
+  hmm_refit_freq:        bimonthly
+  kl_drift_threshold:    0.10     # trigger FAST re-search if HMM drift exceeds this
+  vol_band_window:       20       # days for realized vol calculation
+  vol_band_pct_window:   252      # days for rolling percentile rank
+  low_pct:               0.33
+  high_pct:              0.67
+  # Regime scalar for SAC drawdown penalty
+  drawdown_scalars:
+    Rising:    1.0
+    Rally:     1.0
+    Sideways:  1.2
+    Falling:   2.0
+    Crashing:  5.0
 
-  # HMM input features
-  hmm_features:
-    - "log_return"
-    - "realized_vol_20d"
-    - "momentum_z_10d"
-
-  # Refit schedule
-  refit_frequency: "bimonthly"   # every 2 months
-  regime_change_kl_threshold: 0.10  # KL div > 10% → trigger FAST HP re-search
-
-  # Vol-band percentile thresholds (rolling 252-day)
-  vol_band:
-    low_pct:  33
-    high_pct: 67
-
-# ── Feature engineering ─────────────────────────────────────
+# ── Feature engineering ───────────────────────────────────────────────
 features:
-  # Normalisation window for z-scoring
-  zscore_window: 252
+  zscore_window:            252
+  forward_days:             5       # CNN-LSTM & SVM label horizon
+  svm_n_features:           25      # base (15) + regime dims (10)
+  cnn_channels:             22
+  cnn_lstm_lookback_default: 30
+  signal_threshold_pct:     0.005   # ±0.5 % net-of-costs for CNN-LSTM signal
+  winsorize_sigma:          3.0
+  ffill_limit:              3
 
-  # SVM feature set
-  svm_n_features: 25
-  svm_lookback_days: 1  # uses daily snapshot, not sequences
-
-  # CNN-LSTM input tensor
-  cnn_lstm_lookback_default: 30     # days
-  cnn_lstm_lookback_lc_lv:   60     # large-cap, low-vol
-  cnn_lstm_lookback_hv:       20    # high-vol (shorter context)
-  cnn_lstm_n_channels:        22
-  cnn_lstm_target_horizon:    5     # predict 5-day forward return
-
-  # SAC state space
-  sac_return_lookback: 20   # last 20 daily returns in state
-  sac_state_dims: 35        # approx per symbol
-
-# ── SVM hyperparameter search space ─────────────────────────
+# ── SVM hyperparameter search ─────────────────────────────────────────
 svm_hp:
-  C_low:    0.1
-  C_high:   100.0
-  gamma_low:  1.0e-4
-  gamma_high: 1.0
-  kernel:   "rbf"
-  class_weight: "balanced"
-
-  # Cap-segment overrides
-  large_cap:
-    C_low:   10.0
-    C_high:  100.0
-  mid_cap:
-    C_low:   0.1
-    C_high:  10.0
-
-  # Optuna search budget
-  optuna_trials: 30
-  cv_folds: 5
-  purge_days: 30
-
+  n_trials_full:   50      # Optuna trials (quarterly re-search)
+  n_trials_fast:   30      # Optuna trials (monthly, FAST params only)
+  n_cv_folds:      5
+  # Search space
+  C_low:           0.01
+  C_high:          200.0
+  gamma_low:       1.0e-4
+  gamma_high:      2.0
+  kernel:          rbf      # fixed
+  class_weight:    balanced  # fixed
+  # Cap-segment specific C range hints (used as Optuna priors)
+  large_cap_C_min: 10.0
+  large_cap_C_max: 100.0
+  mid_cap_C_min:   0.1
+  mid_cap_C_max:   10.0
   # Recalibration schedule
-  fast_params: ["C", "gamma"]          # quarterly
-  slow_params: ["kernel", "class_weight"]  # semi-annual
+  fast_params:     [C, gamma]       # re-searched quarterly
+  slow_params:     [kernel, class_weight]  # re-searched semi-annually
 
-# ── CNN-LSTM hyperparameter search space ────────────────────
+# ── CNN-LSTM hyperparameter search ────────────────────────────────────
 cnn_lstm_hp:
-  filters_conv1:   [16, 32, 64]
-  filters_conv2:   [32, 64, 96]
-  kernel_size:     [2, 3, 5]
-  lstm_units:      [32, 64, 96]
-  lookback:        [20, 30, 40, 60]
-  dropout:         [0.2, 0.3, 0.4, 0.5]
-  recurrent_dropout: [0.1, 0.2, 0.3]
-  learning_rate_low:  1.0e-4
-  learning_rate_high: 1.0e-3
-  batch_size:      [32, 64, 128]
-
-  optuna_trials: 20
+  signal_threshold_pct: 0.005
+  n_trials_full:   20
+  n_trials_fast:   10
+  # Architecture slow params (semi-annual)
+  filters_conv1_low:  16
+  filters_conv1_high: 64
+  filters_conv2_low:  32
+  filters_conv2_high: 96
+  kernel_size_low:    2
+  kernel_size_high:   5
+  lstm_units_low:     32
+  lstm_units_high:    96
+  batch_size_options: [32, 64, 128]
+  # FAST params (quarterly)
+  lookback_low:       20
+  lookback_high:      60
+  dropout_low:        0.2
+  dropout_high:       0.5
+  recurrent_dropout_low:  0.1
+  recurrent_dropout_high: 0.3
+  lr_low:             1.0e-4
+  lr_high:            1.0e-3
+  # Training
   early_stopping_patience: 15
-  max_epochs: 200
-  gradient_clip: 1.0
-  sample_weight_recent: 2.0    # weight recent 63 days 2x
+  finetune_epochs:    5
+  finetune_window:    63    # most-recent trading days for per-symbol head fine-tune
+  recent_weight:      2.0   # sample_weight multiplier for most-recent 63 days
 
-  # Head fine-tune settings (monthly)
-  finetune_epochs: 5
-  finetune_lookback_days: 63   # ~3 months
-
-  # Signal threshold (net-of-costs 5d return)
-  signal_threshold_pct: 0.005  # ±0.5%
-
-# ── SAC hyperparameters ──────────────────────────────────────
+# ── SAC hyperparameter search ─────────────────────────────────────────
 sac_hp:
-  # Fast params (quarterly re-search)
-  gamma_low:  0.97
-  gamma_high: 0.99
-  lambda_dd_rising:    0.5
-  lambda_dd_rally:     0.5
-  lambda_dd_sideways:  1.2
-  lambda_dd_falling:   2.0
-  lambda_dd_crashing:  5.0
-  lambda_turnover_low:  0.01
-  lambda_turnover_high: 0.05
+  # FAST params (quarterly)
+  gamma_low:      0.97
+  gamma_high:     0.99
+  lambda_dd_low:  0.5
+  lambda_dd_high: 5.0
+  lambda_turn_low:  0.01
+  lambda_turn_high: 0.05
+  max_pos_lc_base:  0.30   # large-cap base position cap
+  max_pos_mc_base:  0.20   # mid-cap base position cap
+  hv_reduction:     0.67   # multiply base cap when in HV band
+  # SLOW params (semi-annual)
+  tau_low:          5.0e-3
+  tau_high:         1.0e-2
+  replay_buffer_low:  100000
+  replay_buffer_high: 500000
+  hidden_dims:      [256, 256]
+  monthly_update_steps: 10000
 
-  # Slow params (semi-annual)
-  target_smoothing_tau_low: 5.0e-3
-  target_smoothing_tau_high: 1.0e-2
-  replay_buffer_size_low:  100000
-  replay_buffer_size_high: 500000
-  actor_hidden:  [256, 256]
-  critic_hidden: [256, 256]
-
-  # Monthly gradient update steps
-  monthly_gradient_steps: 10000
-
-  # Position caps (fast param)
-  position_cap_normal: 1.0
-  position_cap_hv:     0.2
-
-# ── Ensemble fusion ──────────────────────────────────────────
+# ── Ensemble fusion ───────────────────────────────────────────────────
 fusion:
-  min_agreement: 2           # need ≥2 of 3 signals
-  cooldown_days: 5           # min trading days between trades
-  regime_flat_states:        # always flat in these regimes
-    - "Crashing"
-  max_roundtrips_per_month:
-    rising:    2
-    rally:     2
-    sideways:  1
-    falling:   1
-    crashing:  0
+  min_agreement:      2     # minimum models that must agree for a trade
+  cooldown_days:      5     # trading-day lock after any fill
+  max_monthly_roundtrips:
+    Rising:    2
+    Rally:     2
+    Sideways:  1
+    Falling:   1
+    Crashing:  0
 
-# ── Drift sentinel ───────────────────────────────────────────
+# ── Drift sentinel ────────────────────────────────────────────────────
 sentinel:
-  eval_window_days: 63       # ~3 months OOS
-  sharpe_deviation_threshold: 0.5   # |live - backtest| > 0.5 sigma
-  hit_rate_drop_threshold: 0.10     # >10pp drop → force HP re-search
-  min_oos_sharpe: 0.0        # gate: new model deployed only if ≥ 0
+  eval_window:      63      # trading days
+  sharpe_drift_thr: 0.5     # σ deviation triggers HP re-search
+  hitrate_drop_thr: 0.10    # 10 pp below backtest hit-rate triggers re-search
+  min_oos_sharpe:   0.0     # gate: new model must achieve this to replace prior
 
-# ── NautilusTrader simulation ────────────────────────────────
-backtest_engine:
-  starting_capital_inr: 10000000   # ₹1 Crore
-  venue: "NSE"
-  fill_at: "close"          # EOD fill at close price
-  prob_fill_on_limit: 1.0
-  prob_slippage: 0.0
-
-# ── Walk-forward CV ──────────────────────────────────────────
-walk_forward:
-  step_days: 21             # 1 month
-  purge_gap_days: 30        # prevent label leakage
-  embargo_days: 10          # after each fold end
-
-# ── Output metrics ───────────────────────────────────────────
 metrics:
   sharpe_trading_days: 252
-  mape_min_abs_return: 0.001   # exclude |actual| < 0.1% to avoid div/0
+  mape_min_abs_return: 0.001
   beta_window_days: 252
