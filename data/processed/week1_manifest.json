@@ -1,0 +1,225 @@
+{
+  "run_timestamp": "2026-06-24T04:10:52.301752+00:00",
+  "config_path": "config.yaml",
+  "symbols": {
+    "RELIANCE": {
+      "features_path": "data\\processed\\RELIANCE_features.parquet",
+      "features_shape": [
+        2585,
+        25
+      ],
+      "labels_path": "data\\processed\\RELIANCE_svm_labels.parquet",
+      "vol_band_path": "data\\regime\\RELIANCE_vol_band.parquet",
+      "cnn": {
+        "X_shape": [
+          2551,
+          30,
+          22
+        ],
+        "y_shape": [
+          2551
+        ],
+        "path": "data\\processed\\RELIANCE_cnn_tensors.npz"
+      }
+    },
+    "HDFCBANK": {
+      "features_path": "data\\processed\\HDFCBANK_features.parquet",
+      "features_shape": [
+        2585,
+        25
+      ],
+      "labels_path": "data\\processed\\HDFCBANK_svm_labels.parquet",
+      "vol_band_path": "data\\regime\\HDFCBANK_vol_band.parquet",
+      "cnn": {
+        "X_shape": [
+          2551,
+          30,
+          22
+        ],
+        "y_shape": [
+          2551
+        ],
+        "path": "data\\processed\\HDFCBANK_cnn_tensors.npz"
+      }
+    },
+    "BAJFINANCE": {
+      "features_path": "data\\processed\\BAJFINANCE_features.parquet",
+      "features_shape": [
+        2585,
+        25
+      ],
+      "labels_path": "data\\processed\\BAJFINANCE_svm_labels.parquet",
+      "vol_band_path": "data\\regime\\BAJFINANCE_vol_band.parquet",
+      "cnn": {
+        "X_shape": [
+          2551,
+          30,
+          22
+        ],
+        "y_shape": [
+          2551
+        ],
+        "path": "data\\processed\\BAJFINANCE_cnn_tensors.npz"
+      }
+    },
+    "MARUTI": {
+      "features_path": "data\\processed\\MARUTI_features.parquet",
+      "features_shape": [
+        2585,
+        25
+      ],
+      "labels_path": "data\\processed\\MARUTI_svm_labels.parquet",
+      "vol_band_path": "data\\regime\\MARUTI_vol_band.parquet",
+      "cnn": {
+        "X_shape": [
+          2551,
+          30,
+          22
+        ],
+        "y_shape": [
+          2551
+        ],
+        "path": "data\\processed\\MARUTI_cnn_tensors.npz"
+      }
+    },
+    "HEROMOTOCO": {
+      "features_path": "data\\processed\\HEROMOTOCO_features.parquet",
+      "features_shape": [
+        2585,
+        25
+      ],
+      "labels_path": "data\\processed\\HEROMOTOCO_svm_labels.parquet",
+      "vol_band_path": "data\\regime\\HEROMOTOCO_vol_band.parquet",
+      "cnn": {
+        "X_shape": [
+          2551,
+          30,
+          22
+        ],
+        "y_shape": [
+          2551
+        ],
+        "path": "data\\processed\\HEROMOTOCO_cnn_tensors.npz"
+      }
+    },
+    "BRITANNIA": {
+      "features_path": "data\\processed\\BRITANNIA_features.parquet",
+      "features_shape": [
+        2585,
+        25
+      ],
+      "labels_path": "data\\processed\\BRITANNIA_svm_labels.parquet",
+      "vol_band_path": "data\\regime\\BRITANNIA_vol_band.parquet",
+      "cnn": {
+        "X_shape": [
+          2551,
+          30,
+          22
+        ],
+        "y_shape": [
+          2551
+        ],
+        "path": "data\\processed\\BRITANNIA_cnn_tensors.npz"
+      }
+    },
+    "BOSCHLTD": {
+      "features_path": "data\\processed\\BOSCHLTD_features.parquet",
+      "features_shape": [
+        2585,
+        25
+      ],
+      "labels_path": "data\\processed\\BOSCHLTD_svm_labels.parquet",
+      "vol_band_path": "data\\regime\\BOSCHLTD_vol_band.parquet",
+      "cnn": {
+        "X_shape": [
+          2551,
+          30,
+          22
+        ],
+        "y_shape": [
+          2551
+        ],
+        "path": "data\\processed\\BOSCHLTD_cnn_tensors.npz"
+      }
+    },
+    "MOTHERSON": {
+      "features_path": "data\\processed\\MOTHERSON_features.parquet",
+      "features_shape": [
+        2585,
+        25
+      ],
+      "labels_path": "data\\processed\\MOTHERSON_svm_labels.parquet",
+      "vol_band_path": "data\\regime\\MOTHERSON_vol_band.parquet",
+      "cnn": {
+        "X_shape": [
+          2551,
+          30,
+          22
+        ],
+        "y_shape": [
+          2551
+        ],
+        "path": "data\\processed\\MOTHERSON_cnn_tensors.npz"
+      }
+    },
+    "ABB": {
+      "features_path": "data\\processed\\ABB_features.parquet",
+      "features_shape": [
+        2585,
+        25
+      ],
+      "labels_path": "data\\processed\\ABB_svm_labels.parquet",
+      "vol_band_path": "data\\regime\\ABB_vol_band.parquet",
+      "cnn": {
+        "X_shape": [
+          2551,
+          30,
+          22
+        ],
+        "y_shape": [
+          2551
+        ],
+        "path": "data\\processed\\ABB_cnn_tensors.npz"
+      }
+    },
+    "INDIGO": {
+      "features_path": "data\\processed\\INDIGO_features.parquet",
+      "features_shape": [
+        2585,
+        25
+      ],
+      "labels_path": "data\\processed\\INDIGO_svm_labels.parquet",
+      "vol_band_path": "data\\regime\\INDIGO_vol_band.parquet",
+      "cnn": {
+        "X_shape": [
+          2551,
+          30,
+          22
+        ],
+        "y_shape": [
+          2551
+        ],
+        "path": "data\\processed\\INDIGO_cnn_tensors.npz"
+      }
+    }
+  },
+  "regime": {
+    "path": "data\\regime\\nifty_regime.parquet",
+    "shape": [
+      3805,
+      12
+    ],
+    "state_counts": {
+      "Sideways": 1354,
+      "Falling": 908,
+      "Rising": 625,
+      "Rally": 558,
+      "Crashing": 360
+    }
+  },
+  "calendar": {
+    "n_days": 2585,
+    "start": "2016-01-01",
+    "end": "2026-06-22"
+  }
+}

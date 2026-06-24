@@ -1,0 +1,2627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Converted HTML</title>
+<style>
+body {
+    font-family: Arial, sans-serif;
+    margin: 30px;
+    line-height: 1.6;
+}
+pre {
+    background: #f4f4f4;
+    padding: 15px;
+    border-radius: 8px;
+    overflow-x: auto;
+}
+</style>
+</head>
+<body>
+<!DOCTYPE html>
+<html lang="en">
+ <head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>
+   QBEAST-AI.N — 3-Model Pipeline Project Structure
+  </title>
+  <link href="https://fonts.googleapis.com/css2?family=Spectral:wght@400;600;700&amp;family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+  <style>
+   :root {
+  --bg: #FCFCFD; --ink: #14181F; --muted: #5B6470; --faint: #8A93A0;
+  --line: #E3E7ED; --line-s: #EEF1F5; --card: #FFFFFF;
+  --ml: #0E7C6B; --ml-bg: #E7F4F1;
+  --dl: #3B4DB0; --dl-bg: #EAECF8;
+  --rl: #B5641A; --rl-bg: #F8EEE3;
+  --hmm: #7C3B9E; --hmm-bg: #F3EBF9;
+  --warn: #A2331F; --warn-bg: #FBEDE9;
+  --phase1: #1E5F74; --phase1-bg: #E3EFF3;
+  --phase2: #2F6B3E; --phase2-bg: #E3F0E8;
+  --infra: #4A4A6A; --infra-bg: #EEEEF5;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--ink); font-family: 'Inter', sans-serif; font-size: 15px; line-height: 1.65; -webkit-font-smoothing: antialiased; }
+.wrap { max-width: 1060px; margin: 0 auto; padding: 0 28px; }
+
+header { border-bottom: 2px solid var(--ink); padding: 44px 0 22px; }
+.eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: .22em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+h1 { font-family: 'Spectral', serif; font-weight: 700; font-size: clamp(26px, 4vw, 40px); line-height: 1.1; letter-spacing: -.01em; margin-bottom: 12px; }
+.subtitle { color: var(--muted); font-size: 16px; max-width: 760px; }
+.meta { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 20px; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: var(--faint); }
+.meta strong { color: var(--ink); font-weight: 500; }
+
+section { padding: 32px 0; border-top: 1px solid var(--line-s); }
+h2 { font-family: 'Spectral', serif; font-weight: 700; font-size: 25px; letter-spacing: -.01em; margin-bottom: 6px; display: flex; align-items: baseline; gap: 12px; }
+.num { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--faint); font-weight: 500; }
+.sec-lead { color: var(--muted); font-size: 14.5px; max-width: 820px; margin-bottom: 18px; }
+h3 { font-family: 'Spectral', serif; font-weight: 600; font-size: 18px; margin: 22px 0 8px; }
+
+.chip { display: inline-block; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 4px; letter-spacing: .04em; text-transform: uppercase; }
+.c-ml { background: var(--ml-bg); color: var(--ml); }
+.c-dl { background: var(--dl-bg); color: var(--dl); }
+.c-rl { background: var(--rl-bg); color: var(--rl); }
+.c-hmm { background: var(--hmm-bg); color: var(--hmm); }
+.c-p1 { background: var(--phase1-bg); color: var(--phase1); }
+.c-p2 { background: var(--phase2-bg); color: var(--phase2); }
+.c-inf { background: var(--infra-bg); color: var(--infra); }
+.c-warn { background: var(--warn-bg); color: var(--warn); }
+
+/* pipeline steps */
+.pipeline { display: flex; flex-direction: column; gap: 0; margin: 18px 0; }
+.step { display: flex; gap: 20px; position: relative; }
+.step:not(:last-child)::before { content: ''; position: absolute; left: 20px; top: 44px; bottom: -4px; width: 2px; background: var(--line); z-index: 0; }
+.step-icon { width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600; flex-shrink: 0; z-index: 1; margin-top: 2px; }
+.step-body { flex: 1; padding-bottom: 28px; }
+.step-title { font-weight: 600; font-size: 15px; margin-bottom: 3px; }
+.step-desc { font-size: 13.5px; color: var(--muted); line-height: 1.55; }
+
+/* cards */
+.card-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 14px 0; }
+.card-grid.two { grid-template-columns: repeat(2, 1fr); }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; position: relative; overflow: hidden; }
+.card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; }
+.card.ml::before { background: var(--ml); }
+.card.dl::before { background: var(--dl); }
+.card.rl::before { background: var(--rl); }
+.card.hmm::before { background: var(--hmm); }
+.card.inf::before { background: var(--infra); }
+.card-title { font-weight: 600; font-size: 14px; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+.card ul { padding-left: 16px; font-size: 13px; color: #3a434d; }
+.card li { margin: 3px 0; }
+.card .note { font-size: 12px; color: var(--faint); font-family: 'JetBrains Mono', monospace; margin-top: 8px; }
+
+/* callouts */
+.callout { border: 1px solid var(--line); border-left: 3px solid var(--ml); background: var(--card); border-radius: 0 10px 10px 0; padding: 14px 18px; margin: 14px 0; }
+.callout.warn { border-left-color: var(--warn); background: var(--warn-bg); }
+.callout.phase { border-left-color: var(--phase1); background: var(--phase1-bg); }
+.callout.dl { border-left-color: var(--dl); background: var(--dl-bg); }
+.callout.rl { border-left-color: var(--rl); background: var(--rl-bg); }
+.callout h4 { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 6px; }
+.callout.warn h4 { color: var(--warn); }
+.callout.phase h4 { color: var(--phase1); }
+.callout.dl h4 { color: var(--dl); }
+.callout.rl h4 { color: var(--rl); }
+.callout p, .callout li { font-size: 13.5px; color: #374049; }
+.callout ul { padding-left: 18px; }
+.callout li { margin: 4px 0; }
+
+/* data table */
+table.dt { width: 100%; border-collapse: collapse; font-size: 12.5px; margin: 14px 0; }
+table.dt th { background: #F4F6F8; text-align: left; padding: 8px 11px; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); border-bottom: 1.5px solid var(--line); }
+table.dt td { padding: 8px 11px; border-bottom: 1px solid var(--line-s); vertical-align: top; }
+table.dt td:first-child { font-weight: 600; font-size: 12px; }
+table.dt tr:hover td { background: #FAFBFC; }
+
+/* param tables */
+table.param { width: 100%; border-collapse: collapse; font-size: 12.5px; margin: 10px 0; }
+table.param th { text-align: left; font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); padding: 7px 9px; border-bottom: 1.5px solid var(--line); }
+table.param td { padding: 8px 9px; border-bottom: 1px solid var(--line-s); font-size: 12.5px; vertical-align: top; }
+table.param td.p { font-family: 'JetBrains Mono', monospace; font-weight: 600; color: var(--ink); }
+table.param td.r { font-family: 'JetBrains Mono', monospace; color: #2c3640; }
+.fast { background: #FBE6E2; color: var(--warn); font-family: 'JetBrains Mono', monospace; font-size: 9.5px; font-weight: 600; padding: 1px 5px; border-radius: 4px; }
+.slow { background: var(--dl-bg); color: var(--dl); font-family: 'JetBrains Mono', monospace; font-size: 9.5px; font-weight: 600; padding: 1px 5px; border-radius: 4px; }
+
+/* result table */
+table.res { width: 100%; border-collapse: collapse; font-size: 12.5px; margin: 14px 0; }
+table.res th { background: #14181F; color: #fff; padding: 9px 11px; text-align: center; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .04em; text-transform: uppercase; }
+table.res th:first-child { text-align: left; }
+table.res td { padding: 8px 11px; border-bottom: 1px solid var(--line-s); text-align: center; }
+table.res td:first-child { text-align: left; font-weight: 600; }
+table.res tr:hover td { background: #FAFBFC; }
+table.res .g { color: var(--phase2); font-weight: 600; }
+table.res .r { color: var(--warn); }
+
+/* timeline */
+.timeline { display: grid; grid-template-columns: 120px 1fr; gap: 0; margin: 14px 0; }
+.tl-time { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--faint); padding: 10px 12px 10px 0; text-align: right; border-right: 2px solid var(--line); }
+.tl-event { padding: 10px 0 10px 16px; font-size: 13px; color: #374049; border-bottom: 1px dashed var(--line-s); }
+.tl-event:last-child { border-bottom: none; }
+.tl-event b { color: var(--ink); }
+.tl-time:last-of-type { border-right-color: var(--phase2); }
+
+/* code block */
+.code { background: #1C2333; color: #C9D1D9; border-radius: 10px; padding: 16px 18px; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.7; overflow-x: auto; margin: 12px 0; }
+.code .kw { color: #FF79C6; }
+.code .fn { color: #8BE9FD; }
+.code .st { color: #F1FA8C; }
+.code .cm { color: #6272A4; }
+.code .nm { color: #BD93F9; }
+.code .op { color: #FF79C6; }
+
+/* dir tree */
+.dir { font-family: 'JetBrains Mono', monospace; font-size: 12px; background: #F8F9FA; border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px; line-height: 1.8; color: #374049; margin: 12px 0; }
+.dir .d { color: var(--dl); font-weight: 600; }
+.dir .f { color: var(--muted); }
+.dir .c { color: var(--faint); font-style: italic; }
+
+/* symbol table */
+.sym-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 12px 0; }
+.sym-card { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; background: var(--card); text-align: center; }
+.sym-name { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600; color: var(--ink); }
+.sym-meta { font-size: 11px; color: var(--faint); margin-top: 3px; }
+
+/* toc */
+.toc { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin: 24px 0 8px; }
+.toc a { text-decoration: none; color: var(--ink); border: 1px solid var(--line); border-radius: 9px; padding: 10px 12px; background: var(--card); transition: transform .12s, box-shadow .12s; display: block; }
+.toc a:hover { transform: translateY(-2px); box-shadow: 0 5px 18px rgba(0,0,0,.06); }
+.toc .tk { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; color: var(--faint); letter-spacing: .1em; text-transform: uppercase; }
+.toc .tt { font-weight: 600; font-size: 13px; margin-top: 3px; }
+.toc a.ml .tk { color: var(--ml); }
+.toc a.dl .tk { color: var(--dl); }
+.toc a.rl .tk { color: var(--rl); }
+.toc a.hmm .tk { color: var(--hmm); }
+
+/* badge */
+.badge { display: inline-block; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; padding: 3px 10px; border-radius: 20px; font-weight: 600; }
+.b-p1 { background: var(--phase1-bg); color: var(--phase1); }
+.b-p2 { background: var(--phase2-bg); color: var(--phase2); }
+.b-ml { background: var(--ml-bg); color: var(--ml); }
+.b-dl { background: var(--dl-bg); color: var(--dl); }
+.b-rl { background: var(--rl-bg); color: var(--rl); }
+
+/* flow diagram boxes */
+.flow-box { display: inline-flex; align-items: center; justify-content: center; padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 500; border: 1px solid var(--line); background: var(--card); }
+.flow-arr { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 8px 0; }
+.flow-arr span { color: var(--faint); font-size: 18px; }
+
+footer { border-top: 2px solid var(--ink); margin-top: 32px; padding: 22px 0 60px; color: var(--muted); font-size: 12.5px; }
+footer p { margin: 5px 0; }
+
+@media (max-width: 800px) {
+  .toc { grid-template-columns: repeat(3, 1fr); }
+  .card-grid, .card-grid.two { grid-template-columns: 1fr; }
+  .sym-grid { grid-template-columns: repeat(3, 1fr); }
+  .wrap { padding: 0 16px; }
+  table.res { font-size: 11px; }
+}
+  </style>
+ </head>
+ <body>
+  <header>
+   <div class="wrap">
+    <p class="eyebrow">
+     QBEAST-AI.N · Project Architecture v1 · Senior Quant Engineering Spec
+    </p>
+    <h1>
+     Three-Model Quant Pipeline: SVM + CNN-LSTM + SAC
+    </h1>
+    <p class="subtitle">
+     Full project structure for NSE EOD backtesting across 10 symbols, Jan 2016–Dec 2026, with 5-state HMM regime conditioning, monthly incremental retraining, NautilusTrader execution, and a standardised performance accounting framework.
+    </p>
+    <div class="meta">
+     <span>
+      <strong>
+       Models
+      </strong>
+      SVM · CNN-LSTM · SAC
+     </span>
+     <span>
+      <strong>
+       Training
+      </strong>
+      Jan 2016 – Dec 2019
+     </span>
+     <span>
+      <strong>
+       Backtest
+      </strong>
+      Jan 2020 – Jun 2026
+     </span>
+     <span>
+      <strong>
+       Symbols
+      </strong>
+      10 NSE stocks
+     </span>
+     <span>
+      <strong>
+       Regime
+      </strong>
+      5-state HMM + Vol Percentile
+     </span>
+     <span>
+      <strong>
+       Execution
+      </strong>
+      NautilusTrader v1.224.0
+     </span>
+    </div>
+   </div>
+  </header>
+  <div class="wrap">
+   <div class="toc">
+    <a href="#universe">
+     <div class="tk">
+      §0
+     </div>
+     <div class="tt">
+      Universe &amp; Data
+     </div>
+    </a>
+    <a class="hmm" href="#regime">
+     <div class="tk hmm">
+      §1
+     </div>
+     <div class="tt">
+      Regime Engine
+     </div>
+    </a>
+    <a class="ml" href="#models">
+     <div class="tk ml">
+      §2
+     </div>
+     <div class="tt">
+      3 Models
+     </div>
+    </a>
+    <a href="#loop">
+     <div class="tk">
+      §3
+     </div>
+     <div class="tt">
+      Monthly Loop
+     </div>
+    </a>
+    <a href="#execution">
+     <div class="tk">
+      §4
+     </div>
+     <div class="tt">
+      Execution
+     </div>
+    </a>
+    <a href="#output">
+     <div class="tk">
+      §5
+     </div>
+     <div class="tt">
+      Results Schema
+     </div>
+    </a>
+   </div>
+   <!-- UNIVERSE -->
+   <section id="universe">
+    <h2>
+     <span class="num">
+      §0
+     </span>
+     Universe, data, and cost constants
+    </h2>
+    <p class="sec-lead">
+     10 NSE equities spanning large, mid, and auto/finance sectors. INDIGO starts Nov 2015 — use from Jan 2016 to align all symbols. NIFTY50 benchmark is available from 2010 across three provided CSVs.
+    </p>
+    <div class="sym-grid">
+     <div class="sym-card">
+      <div class="sym-name">
+       RELIANCE
+      </div>
+      <div class="sym-meta">
+       <span class="chip c-ml">
+        LC
+       </span>
+       Energy
+      </div>
+     </div>
+     <div class="sym-card">
+      <div class="sym-name">
+       HDFCBANK
+      </div>
+      <div class="sym-meta">
+       <span class="chip c-ml">
+        LC
+       </span>
+       Banking
+      </div>
+     </div>
+     <div class="sym-card">
+      <div class="sym-name">
+       BAJFINANCE
+      </div>
+      <div class="sym-meta">
+       <span class="chip c-ml">
+        LC
+       </span>
+       NBFC
+      </div>
+     </div>
+     <div class="sym-card">
+      <div class="sym-name">
+       BRITANNIA
+      </div>
+      <div class="sym-meta">
+       <span class="chip c-p1">
+        MC
+       </span>
+       FMCG
+      </div>
+     </div>
+     <div class="sym-card">
+      <div class="sym-name">
+       MARUTI
+      </div>
+      <div class="sym-meta">
+       <span class="chip c-ml">
+        LC
+       </span>
+       Auto
+      </div>
+     </div>
+     <div class="sym-card">
+      <div class="sym-name">
+       HEROMOTOCO
+      </div>
+      <div class="sym-meta">
+       <span class="chip c-ml">
+        LC
+       </span>
+       Auto
+      </div>
+     </div>
+     <div class="sym-card">
+      <div class="sym-name">
+       BOSCHLTD
+      </div>
+      <div class="sym-meta">
+       <span class="chip c-p1">
+        MC
+       </span>
+       Auto Anc
+      </div>
+     </div>
+     <div class="sym-card">
+      <div class="sym-name">
+       MOTHERSON
+      </div>
+      <div class="sym-meta">
+       <span class="chip c-p1">
+        MC
+       </span>
+       Auto Anc
+      </div>
+     </div>
+     <div class="sym-card">
+      <div class="sym-name">
+       ABB
+      </div>
+      <div class="sym-meta">
+       <span class="chip c-p1">
+        MC
+       </span>
+       Cap Goods
+      </div>
+     </div>
+     <div class="sym-card">
+      <div class="sym-name">
+       INDIGO
+      </div>
+      <div class="sym-meta">
+       <span class="chip c-p1">
+        MC
+       </span>
+       Aviation
+      </div>
+     </div>
+    </div>
+    <div class="callout warn">
+     <h4>
+      Transaction cost constants — hard-wire these into every label and reward
+     </h4>
+     <ul>
+      <li>
+       <strong>
+        Per-leg STT + brokerage + stamp + charges ≈ 0.11% of trade value.
+       </strong>
+       Deduct on BOTH buy and sell legs individually: net_value_buy = price × qty × (1 + 0.0011), net_value_sell = price × qty × (1 − 0.0011). This is the effective round-trip cost of ~0.22%.
+      </li>
+      <li>
+       <strong>
+        Short-term capital gains tax (STCG): 20% on net profits
+       </strong>
+       realised within the holding period (assumed all positions intraday or &lt;12m for EOD). Apply annually on net realised gains per symbol per year.
+      </li>
+      <li>
+       <strong>
+        Benchmark
+       </strong>
+       : NIFTY50 from the three benchmark CSVs (2010–2014, 2015–2019, 2020–2026). Buy-and-hold NIFTY from 2016-01-02, apply same STCG on notional annual gains for a fair comparison.
+      </li>
+     </ul>
+    </div>
+    <h3>
+     Data split
+    </h3>
+    <table class="dt">
+     <tr>
+      <th>
+       Phase
+      </th>
+      <th>
+       Period
+      </th>
+      <th>
+       Purpose
+      </th>
+      <th>
+       Symbols available
+      </th>
+     </tr>
+     <tr>
+      <td>
+       Initial HP search
+      </td>
+      <td>
+       Jan 2016 – Dec 2017 (in-sample)
+      </td>
+      <td>
+       Optuna hyperparameter optimisation
+      </td>
+      <td>
+       All 10 (INDIGO from Nov 2015)
+      </td>
+     </tr>
+     <tr>
+      <td>
+       Initial validation
+      </td>
+      <td>
+       Jan 2018 – Dec 2019 (purged OOS)
+      </td>
+      <td>
+       Walk-forward validation, model selection
+      </td>
+      <td>
+       All 10
+      </td>
+     </tr>
+     <tr>
+      <td>
+       Backtest (live sim)
+      </td>
+      <td>
+       Jan 2020 – Jun 2026
+      </td>
+      <td>
+       NautilusTrader execution, monthly retrain loop
+      </td>
+      <td>
+       All 10
+      </td>
+     </tr>
+    </table>
+    <div class="callout">
+     <h4>
+      Purging rule (EOD, critical)
+     </h4>
+     <p>
+      Use
+      <strong>
+       30-day purge gap
+      </strong>
+      between train end and validation start to prevent label leakage through overlapping feature windows. Walk-forward step = 21 trading days (one month). Embargo = 10 days after each fold end. Validation is always OOS by calendar, never by bar.
+     </p>
+    </div>
+   </section>
+   <!-- REGIME ENGINE -->
+   <section id="regime">
+    <h2>
+     <span class="num">
+      §1
+     </span>
+     Regime detection engine
+     <span class="chip c-hmm">
+      Prereq to all models
+     </span>
+    </h2>
+    <p class="sec-lead">
+     A shared regime label is computed daily and injected as a feature/conditioning variable into all three models. This is the HMM + rolling-vol percentile layer from your spec.
+    </p>
+    <div class="card-grid two">
+     <div class="card hmm">
+      <div class="card-title">
+       <span class="chip c-hmm">
+        HMM
+       </span>
+       5-State Hidden Markov Model
+      </div>
+      <ul>
+       <li>
+        Inputs: NIFTY50 daily log-returns, 20-day realised vol, 10-day momentum Z-score
+       </li>
+       <li>
+        States:
+        <strong>
+         Rising, Rally, Sideways, Falling, Crashing
+        </strong>
+       </li>
+       <li>
+        Emission: Gaussian diagonal covariance per state
+       </li>
+       <li>
+        Sticky transitions: raised self-transition prior to avoid flickering
+       </li>
+       <li>
+        Trained on NIFTY50 pooled (not per-symbol) — one regime for the entire universe
+       </li>
+       <li>
+        Viterbi decode daily for the current regime label
+       </li>
+      </ul>
+      <p class="note">
+       Library: hmmlearn · Refit: Bimonthly (SLOW) · Transition: FAST
+      </p>
+     </div>
+     <div class="card">
+      <div class="card-title">
+       <span class="chip c-p1">
+        VOL PERCENTILE
+       </span>
+       Rolling volatility band
+      </div>
+      <ul>
+       <li>
+        Per-symbol 20-day realised vol, rolling 252-day percentile rank
+       </li>
+       <li>
+        Low: ≤33rd pct →
+        <span class="chip c-ml">
+         LV
+        </span>
+       </li>
+       <li>
+        Medium: 33–66th pct →
+        <span class="chip c-p1">
+         MV
+        </span>
+       </li>
+       <li>
+        High: ≥67th pct →
+        <span class="chip c-warn">
+         HV
+        </span>
+       </li>
+       <li>
+        Updated daily; lookback calibrated quarterly
+       </li>
+      </ul>
+      <p class="note">
+       Feeds all model parameter selectors and SAC position caps
+      </p>
+     </div>
+    </div>
+    <h3>
+     Regime-conditioned model behaviour
+    </h3>
+    <table class="dt">
+     <tr>
+      <th>
+       Regime
+      </th>
+      <th>
+       HMM State
+      </th>
+      <th>
+       SVM behaviour
+      </th>
+      <th>
+       CNN-LSTM behaviour
+      </th>
+      <th>
+       SAC behaviour
+      </th>
+     </tr>
+     <tr>
+      <td>
+       <strong>
+        Rising
+       </strong>
+      </td>
+      <td>
+       Bull trend
+      </td>
+      <td>
+       Bullish bias, high C
+      </td>
+      <td>
+       Momentum features weighted
+      </td>
+      <td>
+       Positive sizing, low penalty
+      </td>
+     </tr>
+     <tr>
+      <td>
+       <strong>
+        Rally
+       </strong>
+      </td>
+      <td>
+       Fast up-move
+      </td>
+      <td>
+       Buy signals; tighter margin
+      </td>
+      <td>
+       Short lookback patterns
+      </td>
+      <td>
+       Partial position; watch mean-reversion
+      </td>
+     </tr>
+     <tr>
+      <td>
+       <strong>
+        Sideways
+       </strong>
+      </td>
+      <td>
+       Range-bound
+      </td>
+      <td>
+       Neutral / flat signals
+      </td>
+      <td>
+       Mean-reversion features
+      </td>
+      <td>
+       Minimal position; cost wall is binding
+      </td>
+     </tr>
+     <tr>
+      <td>
+       <strong>
+        Falling
+       </strong>
+      </td>
+      <td>
+       Bear trend
+      </td>
+      <td>
+       Sell signals dominate
+      </td>
+      <td>
+       Down-pattern features
+      </td>
+      <td>
+       Short or flat; drawdown penalty raised
+      </td>
+     </tr>
+     <tr>
+      <td>
+       <strong>
+        Crashing
+       </strong>
+      </td>
+      <td>
+       High-vol crash
+      </td>
+      <td>
+       Flat / safety-first
+      </td>
+      <td>
+       Crash-state features, wider window
+      </td>
+      <td>
+       Zero position; max drawdown brake
+      </td>
+     </tr>
+    </table>
+    <div class="callout">
+     <h4>
+      Implementation: regime as a feature, not a hard switch
+     </h4>
+     <p>
+      Encode the 5-state regime as a one-hot vector (5 dims) + the soft posterior probabilities (5 dims) → 10 additional features appended to every model's feature vector. This is simpler than building separate sub-models per regime while still giving all three models regime-awareness. The SAC reward function also multiplies the drawdown penalty by a regime scalar (1.0 Rising, 1.0 Rally, 1.2 Sideways, 2.0 Falling, 5.0 Crashing).
+     </p>
+    </div>
+   </section>
+   <!-- 3 MODELS -->
+   <section id="models">
+    <h2>
+     <span class="num">
+      §2
+     </span>
+     The three models
+    </h2>
+    <p class="sec-lead">
+     Each model is a self-contained module with its own feature pipeline, HP search space, and output adapter. They share the regime feature vector from §1 and the cost constants from §0. All three signals are fused by a simple equal-weight vote → final position decision.
+    </p>
+    <!-- SVM -->
+    <div class="card ml" style="margin-bottom: 16px;">
+     <div class="card-title" style="font-size:15px; margin-bottom:8px;">
+      <span class="chip c-ml">
+       ML · SVM
+      </span>
+      Market trend classification — RBF kernel
+     </div>
+     <p style="font-size:13.5px; color:#374049; margin-bottom:12px;">
+      <strong>
+       Output:
+      </strong>
+      {-1 = Sell, 0 = Flat, +1 = Buy} for each symbol each day. Combined with CNN-LSTM and SAC signals.
+     </p>
+     <h3 style="font-size:15px; margin:0 0 6px;">
+      Feature set (all standardised per symbol, rolling 252-day z-score)
+     </h3>
+     <div class="callout" style="margin:0 0 12px;">
+      <h4>
+       SVM input features (~25)
+      </h4>
+      <ul>
+       <li>
+        Returns: 1d, 5d, 10d, 20d log-return
+       </li>
+       <li>
+        Trend: SMA10/SMA20 ratio, SMA20/SMA50 ratio, EMA20 slope (5d)
+       </li>
+       <li>
+        Momentum: RSI-14, MACD signal line, ROC-10
+       </li>
+       <li>
+        Volatility: 20d realised vol, ATR-14 / close (normalised), Bollinger band width
+       </li>
+       <li>
+        Volume: OBV 5d change (z), volume ratio (today/20d avg)
+       </li>
+       <li>
+        Regime features: 5-dim one-hot + 5-dim HMM posterior (10 dims)
+       </li>
+      </ul>
+     </div>
+     <table class="param">
+      <tr>
+       <th>
+        Parameter
+       </th>
+       <th>
+        EOD Range
+       </th>
+       <th>
+        Optuna search
+       </th>
+       <th>
+        Recal tier
+       </th>
+      </tr>
+      <tr>
+       <td class="p">
+        C
+       </td>
+       <td class="r">
+        0.1 – 100
+       </td>
+       <td class="r">
+        log-uniform
+       </td>
+       <td>
+        <span class="fast">
+         FAST
+        </span>
+        quarterly
+       </td>
+      </tr>
+      <tr>
+       <td class="p">
+        gamma γ
+       </td>
+       <td class="r">
+        1e-4 – 1.0 + "scale"
+       </td>
+       <td class="r">
+        log-uniform
+       </td>
+       <td>
+        <span class="fast">
+         FAST
+        </span>
+        quarterly
+       </td>
+      </tr>
+      <tr>
+       <td class="p">
+        kernel
+       </td>
+       <td class="r">
+        RBF (fixed)
+       </td>
+       <td class="r">
+        —
+       </td>
+       <td>
+        <span class="slow">
+         SLOW
+        </span>
+        semi-annual
+       </td>
+      </tr>
+      <tr>
+       <td class="p">
+        class_weight
+       </td>
+       <td class="r">
+        "balanced" (fixed)
+       </td>
+       <td class="r">
+        —
+       </td>
+       <td>
+        <span class="slow">
+         SLOW
+        </span>
+       </td>
+      </tr>
+     </table>
+     <div class="callout" style="margin-top:10px;">
+      <h4>
+       Cap × Vol tuning (from calibration report)
+      </h4>
+      <ul>
+       <li>
+        <span class="chip c-ml">
+         LC
+        </span>
+        RELIANCE, HDFCBANK, BAJFINANCE, MARUTI, HEROMOTOCO → C 10–100, tighter RBF
+       </li>
+       <li>
+        <span class="chip c-p1">
+         MC
+        </span>
+        ABB, BOSCHLTD, MOTHERSON, BRITANNIA, INDIGO → C 0.1–10, smoother surface
+       </li>
+       <li>
+        <span class="chip c-warn">
+         HV
+        </span>
+        All: reduce C ↓ and γ ↓ (smoother hyperplane)
+       </li>
+       <li>
+        Refit: Monthly EOD. HP re-search: Quarterly (C, γ are FAST params)
+       </li>
+      </ul>
+     </div>
+    </div>
+    <!-- CNN-LSTM -->
+    <div class="card dl" style="margin-bottom: 16px;">
+     <div class="card-title" style="font-size:15px; margin-bottom:8px;">
+      <span class="chip c-dl">
+       DL · CNN-LSTM
+      </span>
+      Candlestick pattern + sequence learning
+     </div>
+     <p style="font-size:13.5px; color:#374049; margin-bottom:12px;">
+      <strong>
+       Output:
+      </strong>
+      Predicted 5-day forward return (regression); thresholded to {-1, 0, +1} signal. Conv layers extract local patterns; LSTM models temporal evolution.
+     </p>
+     <div class="callout dl" style="margin-bottom:12px;">
+      <h4>
+       Input tensor shape: (batch, lookback_days, channels)
+      </h4>
+      <ul>
+       <li>
+        Channels (all vol-normalised): OHLCV (5), SMA10, SMA20, RSI14, ATR14, MACD-diff, Bollinger-%B, OBV-z, volume-z, regime one-hot (5), vol-band one-hot (3) =
+        <strong>
+         22 channels
+        </strong>
+       </li>
+       <li>
+        EOD lookback: 30 days (FAST, re-searched quarterly). LC/LV: up to 60d. SC/HV: 20–30d.
+       </li>
+       <li>
+        Target: 5-day forward log-return (net of costs) — winsorise at ±3σ before training
+       </li>
+      </ul>
+     </div>
+     <h3 style="font-size:15px; margin:0 0 6px;">
+      Architecture
+     </h3>
+     <div class="code">
+      <span class="cm">
+       # EOD Architecture — Keras / PyTorch
+      </span>
+      Input(shape=(lookback, 22))
+  → Conv1D(filters=
+      <span class="nm">
+       32
+      </span>
+      , kernel_size=
+      <span class="nm">
+       3
+      </span>
+      , activation=
+      <span class="st">
+       'relu'
+      </span>
+      , padding=
+      <span class="st">
+       'causal'
+      </span>
+      )
+  → MaxPool1D(pool_size=
+      <span class="nm">
+       2
+      </span>
+      )
+  → Conv1D(filters=
+      <span class="nm">
+       64
+      </span>
+      , kernel_size=
+      <span class="nm">
+       3
+      </span>
+      , activation=
+      <span class="st">
+       'relu'
+      </span>
+      , padding=
+      <span class="st">
+       'causal'
+      </span>
+      )
+  → MaxPool1D(pool_size=
+      <span class="nm">
+       2
+      </span>
+      )
+  → LSTM(units=
+      <span class="nm">
+       64
+      </span>
+      , return_sequences=
+      <span class="nm">
+       False
+      </span>
+      , recurrent_dropout=
+      <span class="nm">
+       0.2
+      </span>
+      )
+  → Dropout(
+      <span class="nm">
+       0.3
+      </span>
+      )
+  → Dense(
+      <span class="nm">
+       32
+      </span>
+      , activation=
+      <span class="st">
+       'relu'
+      </span>
+      )
+  → Dense(
+      <span class="nm">
+       1
+      </span>
+      )
+      <span class="cm">
+       # scalar return forecast
+      </span>
+     </div>
+     <table class="param">
+      <tr>
+       <th>
+        Parameter
+       </th>
+       <th>
+        EOD Range
+       </th>
+       <th>
+        Recal tier
+       </th>
+      </tr>
+      <tr>
+       <td class="p">
+        filters (Conv1)
+       </td>
+       <td class="r">
+        16 – 64
+       </td>
+       <td>
+        <span class="slow">
+         SLOW
+        </span>
+        semi-annual
+       </td>
+      </tr>
+      <tr>
+       <td class="p">
+        filters (Conv2)
+       </td>
+       <td class="r">
+        32 – 96
+       </td>
+       <td>
+        <span class="slow">
+         SLOW
+        </span>
+       </td>
+      </tr>
+      <tr>
+       <td class="p">
+        kernel_size
+       </td>
+       <td class="r">
+        2 – 5
+       </td>
+       <td>
+        <span class="slow">
+         SLOW
+        </span>
+       </td>
+      </tr>
+      <tr>
+       <td class="p">
+        LSTM units
+       </td>
+       <td class="r">
+        32 – 96
+       </td>
+       <td>
+        <span class="slow">
+         SLOW
+        </span>
+       </td>
+      </tr>
+      <tr>
+       <td class="p">
+        lookback
+       </td>
+       <td class="r">
+        20 – 60 days
+       </td>
+       <td>
+        <span class="fast">
+         FAST
+        </span>
+        quarterly
+       </td>
+      </tr>
+      <tr>
+       <td class="p">
+        dropout
+       </td>
+       <td class="r">
+        0.2 – 0.5
+       </td>
+       <td>
+        <span class="fast">
+         FAST
+        </span>
+       </td>
+      </tr>
+      <tr>
+       <td class="p">
+        recurrent_dropout
+       </td>
+       <td class="r">
+        0.1 – 0.3
+       </td>
+       <td>
+        <span class="fast">
+         FAST
+        </span>
+       </td>
+      </tr>
+      <tr>
+       <td class="p">
+        learning_rate
+       </td>
+       <td class="r">
+        1e-4 – 1e-3
+       </td>
+       <td>
+        <span class="fast">
+         FAST
+        </span>
+       </td>
+      </tr>
+      <tr>
+       <td class="p">
+        batch_size
+       </td>
+       <td class="r">
+        32 – 128
+       </td>
+       <td>
+        <span class="slow">
+         SLOW
+        </span>
+       </td>
+      </tr>
+     </table>
+     <div class="callout" style="margin-top:10px;">
+      <h4>
+       Training protocol
+      </h4>
+      <ul>
+       <li>
+        Pooled cross-symbol training (stack all 10 symbols) then fine-tune per-symbol for final layer weights
+       </li>
+       <li>
+        Adam optimiser, cosine LR decay, gradient clipping 1.0
+       </li>
+       <li>
+        Early stopping: patience=15 on purged OOS loss
+       </li>
+       <li>
+        Loss: MSE on cost-netted returns. Weight recent observations 2× via sample_weight
+       </li>
+       <li>
+        Refit: Monthly full retrain + weekly fine-tune of Dense head (incremental)
+       </li>
+      </ul>
+     </div>
+    </div>
+    <!-- SAC -->
+    <div class="card rl" style="margin-bottom: 16px;">
+     <div class="card-title" style="font-size:15px; margin-bottom:8px;">
+      <span class="chip c-rl">
+       RL · SAC
+      </span>
+      Continuous position sizing
+     </div>
+     <p style="font-size:13.5px; color:#374049; margin-bottom:12px;">
+      <strong>
+       Output:
+      </strong>
+      Continuous position weight ∈ [−1, +1] per symbol. Positive = long, negative = short/flat (equity long-only: clip to [0, 1]). SAC's off-policy replay buffer supports incremental intra-month updates.
+     </p>
+     <div class="callout rl" style="margin-bottom:12px;">
+      <h4>
+       State space and reward
+      </h4>
+      <ul>
+       <li>
+        <strong>
+         State (per symbol, t):
+        </strong>
+        last 20 daily returns, current position, unrealised PnL%, SVM signal, CNN-LSTM return forecast, regime one-hot (5), vol-band one-hot (3), days-since-last-trade, normalised time-in-position →
+        <strong>
+         ~35 dims per symbol
+        </strong>
+       </li>
+       <li>
+        <strong>
+         Action:
+        </strong>
+        Δposition ∈ [−1, +1] → clipped to valid range; translated to share count via portfolio fraction
+       </li>
+       <li>
+        <strong>
+         Reward:
+        </strong>
+        r_t = (pnl_t − tx_cost_t) − λ_dd × max_drawdown_t − λ_turn × |Δpos_t|
+       </li>
+       <li>
+        λ_dd: 0.5 Rising → 2.0 Falling → 5.0 Crashing (regime-scaled)
+       </li>
+       <li>
+        tx_cost_t = price × |Δshares| × 0.0011 on each leg, deducted from reward
+       </li>
+       <li>
+        γ = 0.97–0.99 (EOD), FAST parameter — re-searched quarterly
+       </li>
+      </ul>
+     </div>
+     <table class="param">
+      <tr>
+       <th>
+        Parameter
+       </th>
+       <th>
+        EOD Range
+       </th>
+       <th>
+        Recal tier
+       </th>
+      </tr>
+      <tr>
+       <td class="p">
+        temperature α
+       </td>
+       <td class="r">
+        auto-tuned
+       </td>
+       <td>
+        <span class="fast">
+         FAST
+        </span>
+       </td>
+      </tr>
+      <tr>
+       <td class="p">
+        target smoothing τ
+       </td>
+       <td class="r">
+        5e-3 – 1e-2
+       </td>
+       <td>
+        <span class="slow">
+         SLOW
+        </span>
+       </td>
+      </tr>
+      <tr>
+       <td class="p">
+        discount γ
+       </td>
+       <td class="r">
+        0.97 – 0.99
+       </td>
+       <td>
+        <span class="fast">
+         FAST
+        </span>
+       </td>
+      </tr>
+      <tr>
+       <td class="p">
+        replay buffer size
+       </td>
+       <td class="r">
+        1e5 – 5e5
+       </td>
+       <td>
+        <span class="slow">
+         SLOW
+        </span>
+       </td>
+      </tr>
+      <tr>
+       <td class="p">
+        actor/critic hidden
+       </td>
+       <td class="r">
+        [256, 256]
+       </td>
+       <td>
+        <span class="slow">
+         SLOW
+        </span>
+       </td>
+      </tr>
+      <tr>
+       <td class="p">
+        max position cap
+       </td>
+       <td class="r">
+        0.2 (SC/HV) – 1.0
+       </td>
+       <td>
+        <span class="fast">
+         FAST
+        </span>
+       </td>
+      </tr>
+      <tr>
+       <td class="p">
+        λ_drawdown
+       </td>
+       <td class="r">
+        0.5 – 5.0 (regime-scaled)
+       </td>
+       <td>
+        <span class="fast">
+         FAST
+        </span>
+       </td>
+      </tr>
+      <tr>
+       <td class="p">
+        λ_turnover
+       </td>
+       <td class="r">
+        0.01 – 0.05
+       </td>
+       <td>
+        <span class="fast">
+         FAST
+        </span>
+       </td>
+      </tr>
+     </table>
+     <div class="callout" style="margin-top:10px;">
+      <h4>
+       Simulator requirements (NautilusTrader)
+      </h4>
+      <ul>
+       <li>
+        Daily fills at close price (EOD, acceptable for daily bar models)
+       </li>
+       <li>
+        0.11% cost deducted on both legs in the environment step — not as post-hoc adjustment
+       </li>
+       <li>
+        Position caps: RELIANCE/HDFC/BAJ/MARUTI/HERO: up to 30% per name; others: 20%
+       </li>
+       <li>
+        Off-policy: replay buffer accumulates across monthly retrains — carry forward across months
+       </li>
+      </ul>
+     </div>
+    </div>
+    <!-- Signal fusion -->
+    <h3>
+     Signal fusion: SVM + CNN-LSTM + SAC → final trade
+    </h3>
+    <div class="callout">
+     <h4>
+      Simple vote-then-size rule
+     </h4>
+     <ul>
+      <li>
+       <strong>
+        SVM signal
+       </strong>
+       : {−1, 0, +1} → direction vote
+      </li>
+      <li>
+       <strong>
+        CNN-LSTM signal
+       </strong>
+       : thresholded return forecast → {−1, 0, +1} direction vote (threshold = ±0.5% net-of-costs predicted 5d return)
+      </li>
+      <li>
+       <strong>
+        SAC action
+       </strong>
+       : continuous [0,1] weight → direction sign
+      </li>
+      <li>
+       <strong>
+        Fusion:
+       </strong>
+       if ≥2 of 3 signals agree on direction → take the trade; position size = SAC weight × regime position cap. If disagreement → flat (0 position).
+      </li>
+      <li>
+       <strong>
+        Override:
+       </strong>
+       Crashing regime → always flat regardless of signals.
+      </li>
+     </ul>
+    </div>
+   </section>
+   <!-- MONTHLY LOOP -->
+   <section id="loop">
+    <h2>
+     <span class="num">
+      §3
+     </span>
+     Monthly incremental retrain loop
+    </h2>
+    <p class="sec-lead">
+     The continuous learning framework. On the first trading day of each month during the backtest period (Jan 2020 – Jun 2026), this loop fires for all 10 symbols and all 3 models.
+    </p>
+    <div class="pipeline">
+     <div class="step">
+      <div class="step-icon" style="background:var(--phase1-bg); color:var(--phase1);">
+       01
+      </div>
+      <div class="step-body">
+       <div class="step-title">
+        Regime refit check
+        <span class="badge b-p1">
+         Monthly trigger
+        </span>
+       </div>
+       <div class="step-desc">
+        Re-fit HMM on NIFTY50 data up to month-end. Check if any state transition matrix changed by &gt;10% (KL divergence) → if yes, flag all model parameters tagged FAST for mandatory re-search this month. Always re-decode Viterbi path and update regime features for all 10 symbols.
+       </div>
+      </div>
+     </div>
+     <div class="step">
+      <div class="step-icon" style="background:var(--ml-bg); color:var(--ml);">
+       02
+      </div>
+      <div class="step-body">
+       <div class="step-title">
+        SVM: incremental refit
+        <span class="badge b-ml">
+         Monthly weights
+        </span>
+       </div>
+       <div class="step-desc">
+        Append the latest month's daily bars to the training set. Retrain SVM (sklearn.svm.SVC) on the full expanding window (Jan 2016 → current month-end). Re-search C and γ via Optuna (30 trials, 5-fold time-series CV with 30-day purge) only if: quarterly trigger has fired, or regime flag from step 01 is set. Otherwise reuse prior HP and just refit weights on new data.
+       </div>
+      </div>
+     </div>
+     <div class="step">
+      <div class="step-icon" style="background:var(--dl-bg); color:var(--dl);">
+       03
+      </div>
+      <div class="step-body">
+       <div class="step-title">
+        CNN-LSTM: full monthly retrain + fine-tune head
+        <span class="badge b-dl">
+         Monthly weights
+        </span>
+       </div>
+       <div class="step-desc">
+        Full retrain: pooled cross-symbol, expanding window, early stopping on purged OOS. Then per-symbol head fine-tune: freeze Conv1D + LSTM layers, retrain only the Dense(32) and Dense(1) layers for 5 epochs on the most recent 63 days of that symbol's data (3 months, weighted 2× most recent). HP re-search (Optuna, 20 trials) quarterly or on regime flip for FAST params (lookback, dropout, LR).
+       </div>
+      </div>
+     </div>
+     <div class="step">
+      <div class="step-icon" style="background:var(--rl-bg); color:var(--rl);">
+       04
+      </div>
+      <div class="step-body">
+       <div class="step-title">
+        SAC: experience replay update
+        <span class="badge b-rl">
+         Weekly+ cadence
+        </span>
+       </div>
+       <div class="step-desc">
+        SAC is off-policy: the replay buffer accumulates continuously during the backtest month. At month-end: run 10,000 gradient update steps from the buffer. Re-search γ and λ_dd quarterly. Position cap is updated immediately whenever the vol-band classification changes (FAST). Full policy evaluation (Sharpe + drawdown sentinel) on the last 63 trading days to check for drift.
+       </div>
+      </div>
+     </div>
+     <div class="step">
+      <div class="step-icon" style="background:var(--phase2-bg); color:var(--phase2);">
+       05
+      </div>
+      <div class="step-body">
+       <div class="step-title">
+        Drift sentinel gate
+        <span class="badge b-p2">
+         Before deployment
+        </span>
+       </div>
+       <div class="step-desc">
+        For each retrained model: compute rolling 63-day live Sharpe vs backtest Sharpe. If |live − backtest| &gt; 0.5σ OR live hit-rate drops &gt;10pp below backtest hit-rate → trigger mandatory HP re-search regardless of calendar. Gate model deployment: new model only replaces current if OOS Sharpe ≥ 0.0 on the last 63 days. If gate fails → hold prior model, log alert.
+       </div>
+      </div>
+     </div>
+     <div class="step">
+      <div class="step-icon" style="background:#EEF1F5; color:var(--infra);">
+       06
+      </div>
+      <div class="step-body">
+       <div class="step-title">
+        Cost accounting update
+       </div>
+       <div class="step-desc">
+        At month-end: compute cumulative realised PnL per symbol. Apply STCG (20%) on net realised gains within the year. Reset intra-year running total for next month. Log: gross PnL, transaction costs deducted, STCG deducted, net PnL, per symbol and portfolio aggregate.
+       </div>
+      </div>
+     </div>
+    </div>
+    <div class="callout warn">
+     <h4>
+      Look-ahead prevention checklist
+     </h4>
+     <ul>
+      <li>
+       All features computed with data available at market-close t; trade executed at open t+1 (or close t+1 acceptable for EOD)
+      </li>
+      <li>
+       No future returns in any feature; regime decoded at t uses only data up to t
+      </li>
+      <li>
+       CNN-LSTM: causal padding on all Conv1D layers; no BiLSTM on the live path
+      </li>
+      <li>
+       SAC: state at t never includes t+1 fill price
+      </li>
+      <li>
+       Monthly retraining uses data up to last day of prior month only (not current month)
+      </li>
+     </ul>
+    </div>
+   </section>
+   <!-- EXECUTION FRAMEWORK -->
+   <section id="execution">
+    <h2>
+     <span class="num">
+      §4
+     </span>
+     NautilusTrader v1.224.0 execution framework
+    </h2>
+    <p class="sec-lead">
+     NautilusTrader provides event-driven backtesting with realistic fills. Use the BacktestEngine for the EOD simulation loop.
+    </p>
+    <div class="code">
+     <span class="cm">
+      # Minimal NautilusTrader EOD backtester skeleton
+     </span>
+     <span class="kw">
+      from
+     </span>
+     nautilus_trader.backtest.engine
+     <span class="kw">
+      import
+     </span>
+     BacktestEngine
+     <span class="kw">
+      from
+     </span>
+     nautilus_trader.backtest.data
+     <span class="kw">
+      import
+     </span>
+     BacktestDataConfig
+     <span class="kw">
+      from
+     </span>
+     nautilus_trader.model.enums
+     <span class="kw">
+      import
+     </span>
+     AccountType, OmsType
+
+engine =
+     <span class="fn">
+      BacktestEngine
+     </span>
+     (config=BacktestEngineConfig(
+    strategies=[
+     <span class="fn">
+      ImportableStrategyConfig
+     </span>
+     (
+        strategy_path=
+     <span class="st">
+      "qbeast.strategy:QBeastTriModel"
+     </span>
+     ,
+        config_path=
+     <span class="st">
+      "qbeast.strategy:QBeastConfig"
+     </span>
+     ,
+    )],
+))
+     <span class="cm">
+      # Add venue: NSE with realistic commission model
+     </span>
+     engine.
+     <span class="fn">
+      add_venue
+     </span>
+     (
+    venue=
+     <span class="fn">
+      Venue
+     </span>
+     (
+     <span class="st">
+      "NSE"
+     </span>
+     ),
+    oms_type=OmsType.NETTING,
+    account_type=AccountType.MARGIN,
+    starting_balances=[
+     <span class="fn">
+      Money
+     </span>
+     (
+     <span class="nm">
+      10_000_000
+     </span>
+     ,
+     <span class="fn">
+      INR
+     </span>
+     )],
+     <span class="cm">
+      # ₹1 Cr starting capital
+     </span>
+     fill_model=
+     <span class="fn">
+      FillModel
+     </span>
+     (
+        prob_fill_on_limit=
+     <span class="nm">
+      1.0
+     </span>
+     ,
+        prob_slippage=
+     <span class="nm">
+      0.0
+     </span>
+     ,
+     <span class="cm">
+      # EOD: assume close-price fill
+     </span>
+     ),
+    fee_model=
+     <span class="fn">
+      MakerTakerFeeModel
+     </span>
+     (
+        maker=
+     <span class="nm">
+      0.0011
+     </span>
+     ,
+     <span class="cm">
+      # 0.11% both sides
+     </span>
+     taker=
+     <span class="nm">
+      0.0011
+     </span>
+     ,
+    ),
+)
+     <span class="cm">
+      # Strategy receives signals from SVM + CNN-LSTM + SAC ensemble
+     </span>
+     <span class="cm">
+      # Each on_bar: compute features → get signals → fuse → place order
+     </span>
+    </div>
+    <h3>
+     Key strategy events
+    </h3>
+    <div class="card-grid">
+     <div class="card inf">
+      <div class="card-title">
+       <span class="chip c-inf">
+        on_bar
+       </span>
+       Daily trigger
+      </div>
+      <ul>
+       <li>
+        Compute all 22 features per symbol
+       </li>
+       <li>
+        Call SVM.predict(features) → direction
+       </li>
+       <li>
+        Call CNNLSTM.predict(sequence) → return_fc
+       </li>
+       <li>
+        Call SAC.act(state) → position_weight
+       </li>
+       <li>
+        Fuse signals → target_position
+       </li>
+       <li>
+        Compute delta vs current_position
+       </li>
+       <li>
+        If |delta| &gt; min_trade threshold → submit order
+       </li>
+      </ul>
+     </div>
+     <div class="card inf">
+      <div class="card-title">
+       <span class="chip c-inf">
+        on_order_filled
+       </span>
+      </div>
+      <ul>
+       <li>
+        Record fill price, quantity, time
+       </li>
+       <li>
+        Compute actual tx_cost (fill_price × qty × 0.0011)
+       </li>
+       <li>
+        Update SAC replay buffer with (s, a, r, s') tuple
+       </li>
+       <li>
+        Update running cost accumulator
+       </li>
+       <li>
+        Update realised PnL tracker
+       </li>
+      </ul>
+     </div>
+     <div class="card inf">
+      <div class="card-title">
+       <span class="chip c-inf">
+        on_month_end
+       </span>
+      </div>
+      <ul>
+       <li>
+        Run monthly retrain loop (§3)
+       </li>
+       <li>
+        Apply STCG on realised gains
+       </li>
+       <li>
+        Log all metrics to results ledger
+       </li>
+       <li>
+        Check drift sentinel, gate models
+       </li>
+       <li>
+        Swap in retrained models if gate passes
+       </li>
+      </ul>
+     </div>
+    </div>
+    <h3>
+     Trade reduction mechanism (1 buy + 1 sell per month target)
+    </h3>
+    <div class="callout">
+     <h4>
+      Turnover budget per symbol per month
+     </h4>
+     <p>
+      The ensemble fusion rule already suppresses noise (require 2/3 signal agreement). Add an explicit
+      <strong>
+       position cooldown
+      </strong>
+      : after any trade (buy or sell), lock the symbol for min(5 trading days, next regime change). Combine with SAC's λ_turnover penalty. Target: ≤2 round-trips (4 legs) per symbol per month in Rising/Rally regime, ≤1 in Sideways/Falling. Portfolio-level: with 10 symbols × ≤2 round-trips = ≤20 fills/month → ≤40 leg executions/month → tx_cost ≤ 40 × 0.11% per leg = bounded and budget-tracked.
+     </p>
+    </div>
+   </section>
+   <!-- RESULTS SCHEMA -->
+   <section id="output">
+    <h2>
+     <span class="num">
+      §5
+     </span>
+     Results schema — standardised output tables
+    </h2>
+    <p class="sec-lead">
+     Two tables + one combined chart. Table 1 = per-model performance metrics. Table 2 = cost decomposition. Chart = cumulative returns and costs on one axis for all models vs NIFTY50.
+    </p>
+    <h3>
+     Table 1: Per-model performance metrics (annual, Jan 2020 – Jun 2026)
+    </h3>
+    <div style="overflow-x:auto;">
+     <table class="res">
+      <tr>
+       <th style="text-align:left; min-width:130px;">
+        Metric
+       </th>
+       <th>
+        NIFTY50
+        <br/>
+        Benchmark
+       </th>
+       <th>
+        <span class="chip c-ml">
+         ML · SVM
+        </span>
+       </th>
+       <th>
+        <span class="chip c-dl">
+         DL · CNN-LSTM
+        </span>
+       </th>
+       <th>
+        <span class="chip c-rl">
+         RL · SAC
+        </span>
+       </th>
+       <th>
+        Ensemble
+        <br/>
+        Fusion
+       </th>
+      </tr>
+      <tr>
+       <td>
+        <strong>
+         Ann. Return (gross)
+        </strong>
+        <br/>
+        <span style="font-weight:400; font-size:11px; color:var(--faint)">
+         before costs
+        </span>
+       </td>
+       <td>
+        —
+       </td>
+       <td>
+        —
+       </td>
+       <td>
+        —
+       </td>
+       <td>
+        —
+       </td>
+       <td>
+        —
+       </td>
+      </tr>
+      <tr>
+       <td>
+        <strong>
+         Ann. Return (net tx)
+        </strong>
+        <br/>
+        <span style="font-weight:400; font-size:11px; color:var(--faint)">
+         after 0.11% per leg
+        </span>
+       </td>
+       <td class="g">
+        —
+       </td>
+       <td>
+        —
+       </td>
+       <td>
+        —
+       </td>
+       <td>
+        —
+       </td>
+       <td>
+        —
+       </td>
+      </tr>
+      <tr>
+       <td>
+        <strong>
+         Ann. Return (net tx+STCG)
+        </strong>
+        <br/>
+        <span style="font-weight:400; font-size:11px; color:var(--faint)">
+         after costs + 20% tax
+        </span>
+       </td>
+       <td class="g">
+        —
+       </td>
+       <td>
+        —
+       </td>
+       <td>
+        —
+       </td>
+       <td>
+        —
+       </td>
+       <td>
+        —
+       </td>
+      </tr>
+      <tr>
+       <td>
+        <strong>
+         Cumul. Transaction Charges
+        </strong>
+        <br/>
+        <span style="font-weight:400; font-size:11px; color:var(--faint)">
+         ₹ total, both legs
+        </span>
+       </td>
+       <td>
+        —
+       </td>
+       <td>
+        —
+       </td>
+       <td>
+        —
+       </td>
+       <td>
+        —
+       </td>
+       <td>
+        —
+       </td>
+      </tr>
+      <tr>
+       <td>
+        <strong>
+         Cumul. STCG Paid
+        </strong>
+        <br/>
+        <span style="font-weight:400; font-size:11px; color:var(--faint)">
+         ₹ total over backtest
+        </span>
+       </td>
+       <td>
+        —
+       </td>
+       <td>
+        —
+       </td>
+       <td>
+        —
+       </td>
+       <td>
+        —
+       </td>
+       <td>
+        —
+       </td>
+      </tr>
+      <tr>
+       <td>
+        <strong>
+         Win Rate (%)
+        </strong>
+        <br/>
+        <span style="font-weight:400; font-size:11px; color:var(--faint)">
+         % trades with PnL &gt; 0
+        </span>
+       </td>
+       <td>
+        —
+       </td>
+       <td>
+        —
+       </td>
+       <td>
+        —
+       </td>
+       <td>
+        —
+       </td>
+       <td>
+        —
+       </td>
+      </tr>
+      <tr>
+       <td>
+        <strong>
+         MAPE (%)
+        </strong>
+        <br/>
+        <span style="font-weight:400; font-size:11px; color:var(--faint)">
+         vs 5d forward return target
+        </span>
+       </td>
+       <td>
+        n/a
+       </td>
+       <td>
+        —
+       </td>
+       <td>
+        —
+       </td>
+       <td>
+        n/a
+       </td>
+       <td>
+        —
+       </td>
+      </tr>
+      <tr>
+       <td>
+        <strong>
+         Avg. Sharpe (annual)
+        </strong>
+        <br/>
+        <span style="font-weight:400; font-size:11px; color:var(--faint)">
+         rolling 252d, averaged
+        </span>
+       </td>
+       <td>
+        —
+       </td>
+       <td>
+        —
+       </td>
+       <td>
+        —
+       </td>
+       <td>
+        —
+       </td>
+       <td>
+        —
+       </td>
+      </tr>
+      <tr>
+       <td>
+        <strong>
+         Avg. Beta (vs NIFTY50)
+        </strong>
+        <br/>
+        <span style="font-weight:400; font-size:11px; color:var(--faint)">
+         rolling 252d OLS beta
+        </span>
+       </td>
+       <td class="g">
+        1.00
+       </td>
+       <td>
+        —
+       </td>
+       <td>
+        —
+       </td>
+       <td>
+        —
+       </td>
+       <td>
+        —
+       </td>
+      </tr>
+     </table>
+    </div>
+    <p style="font-size:11.5px; color:var(--faint); margin-top:6px; font-family:'JetBrains Mono',monospace;">
+     — = populated from backtest run. MAPE computed on CNN-LSTM only (only model making a point return forecast). Win rate = % of closed round-trips with net PnL &gt; 0. Benchmark STCG = notional 20% on annual gains assuming full exit.
+    </p>
+    <h3>
+     Metric computation formulas
+    </h3>
+    <div class="callout">
+     <h4>
+      Exact definitions — implement these in the ledger
+     </h4>
+     <ul>
+      <li>
+       <strong>
+        tx_cost per trade:
+       </strong>
+       cost = |shares| × price × 0.0011 — deducted on BOTH buy and sell. Cumulative = Σ all legs.
+      </li>
+      <li>
+       <strong>
+        Realised PnL (per position close):
+       </strong>
+       pnl = (sell_price − buy_price) × shares − tx_cost_buy − tx_cost_sell
+      </li>
+      <li>
+       <strong>
+        STCG (per year):
+       </strong>
+       stcg = max(0, net_realised_pnl_this_year × 0.20). Applied end-of-year. Reduces NAV immediately in Dec of each year.
+      </li>
+      <li>
+       <strong>
+        Net return (after tx+STCG):
+       </strong>
+       r_net = (ending_NAV − beginning_NAV − stcg_paid) / beginning_NAV
+      </li>
+      <li>
+       <strong>
+        Sharpe:
+       </strong>
+       Sharpe = mean(daily_net_returns × 252) / (std(daily_net_returns) × √252). Use risk-free = 6.5% annualised (Indian 91-day T-bill approx).
+      </li>
+      <li>
+       <strong>
+        Beta:
+       </strong>
+       β = Cov(strategy_returns, NIFTY50_returns) / Var(NIFTY50_returns) — rolling 252-day window, averaged over backtest.
+      </li>
+      <li>
+       <strong>
+        Win rate:
+       </strong>
+       n_profitable_round_trips / n_total_round_trips. A round-trip = one buy + corresponding sell.
+      </li>
+      <li>
+       <strong>
+        MAPE (CNN-LSTM only):
+       </strong>
+       MAPE = mean(|actual_5d_return − predicted_5d_return| / |actual_5d_return|) × 100. Exclude bars where |actual| &lt; 0.1% to avoid division-near-zero.
+      </li>
+     </ul>
+    </div>
+    <h3>
+     Chart specification: all models in one chart
+    </h3>
+    <div class="callout dl">
+     <h4>
+      Dual-axis chart requirements
+     </h4>
+     <ul>
+      <li>
+       <strong>
+        Left Y-axis (primary):
+       </strong>
+       Cumulative returns index (base=100 at Jan 2020-01-01) for: NIFTY50 benchmark (black dashed), SVM net-of-costs (green), CNN-LSTM net-of-costs (blue), SAC net-of-costs (orange), Ensemble net-of-costs (purple)
+      </li>
+      <li>
+       <strong>
+        Right Y-axis (secondary):
+       </strong>
+       Cumulative transaction charges + STCG paid (₹ absolute, stacked area — muted red fill) for each model
+      </li>
+      <li>
+       <strong>
+        X-axis:
+       </strong>
+       Monthly intervals Jan 2020 – Jun 2026
+      </li>
+      <li>
+       <strong>
+        Shaded bands:
+       </strong>
+       HMM regime bands across the time axis — semi-transparent colour fills per state (Rising=green, Rally=lime, Sideways=grey, Falling=orange, Crashing=red)
+      </li>
+      <li>
+       <strong>
+        Library:
+       </strong>
+       matplotlib (Python) or Plotly for interactive HTML version
+      </li>
+      <li>
+       <strong>
+        Annotations:
+       </strong>
+       mark major events: COVID crash (Mar 2020), recovery rally (Apr–Dec 2020), Union Budget dates, NIFTY reconstitutions
+      </li>
+     </ul>
+    </div>
+   </section>
+   <!-- PROJECT STRUCTURE -->
+   <section id="structure">
+    <h2>
+     <span class="num">
+      §6
+     </span>
+     Repository &amp; code structure
+    </h2>
+    <div class="dir">
+     <span class="d">
+      qbeast_trimodel/
+     </span>
+     ├──
+     <span class="d">
+      data/
+     </span>
+     │   ├──
+     <span class="d">
+      raw/
+     </span>
+     <span class="c">
+      # RELIANCE.csv, HDFCBANK.csv … (10 symbols + NIFTY50)
+     </span>
+     │   ├──
+     <span class="d">
+      processed/
+     </span>
+     <span class="c">
+      # feature matrices per symbol (parquet)
+     </span>
+     │   └──
+     <span class="d">
+      regime/
+     </span>
+     <span class="c">
+      # daily regime labels, vol percentiles
+     </span>
+     ├──
+     <span class="d">
+      regime/
+     </span>
+     │   ├──
+     <span class="f">
+      hmm_model.py
+     </span>
+     <span class="c">
+      # 5-state HMM training and Viterbi decode
+     </span>
+     │   └──
+     <span class="f">
+      vol_band.py
+     </span>
+     <span class="c">
+      # rolling 252d vol percentile classifier
+     </span>
+     ├──
+     <span class="d">
+      models/
+     </span>
+     │   ├──
+     <span class="d">
+      svm/
+     </span>
+     │   │   ├──
+     <span class="f">
+      features.py
+     </span>
+     <span class="c">
+      # 25-dim feature builder
+     </span>
+     │   │   ├──
+     <span class="f">
+      train.py
+     </span>
+     <span class="c">
+      # sklearn SVC, Optuna HP search
+     </span>
+     │   │   └──
+     <span class="f">
+      predict.py
+     </span>
+     <span class="c">
+      # signal {-1, 0, +1}
+     </span>
+     │   ├──
+     <span class="d">
+      cnn_lstm/
+     </span>
+     │   │   ├──
+     <span class="f">
+      dataset.py
+     </span>
+     <span class="c">
+      # (batch, lookback, 22) tensor builder
+     </span>
+     │   │   ├──
+     <span class="f">
+      model.py
+     </span>
+     <span class="c">
+      # Conv1D → LSTM → Dense architecture
+     </span>
+     │   │   ├──
+     <span class="f">
+      train.py
+     </span>
+     <span class="c">
+      # pooled train + per-symbol head fine-tune
+     </span>
+     │   │   └──
+     <span class="f">
+      predict.py
+     </span>
+     <span class="c">
+      # return forecast → thresholded signal
+     </span>
+     │   └──
+     <span class="d">
+      sac/
+     </span>
+     │       ├──
+     <span class="f">
+      env.py
+     </span>
+     <span class="c">
+      # gym.Env wrapping NautilusTrader EOD sim
+     </span>
+     │       ├──
+     <span class="f">
+      agent.py
+     </span>
+     <span class="c">
+      # stable-baselines3 SAC with custom reward
+     </span>
+     │       └──
+     <span class="f">
+      predict.py
+     </span>
+     <span class="c">
+      # continuous position weight [0, 1]
+     </span>
+     ├──
+     <span class="d">
+      fusion/
+     </span>
+     │   └──
+     <span class="f">
+      ensemble.py
+     </span>
+     <span class="c">
+      # 2/3 vote rule + SAC sizing + regime overrides
+     </span>
+     ├──
+     <span class="d">
+      backtest/
+     </span>
+     │   ├──
+     <span class="f">
+      strategy.py
+     </span>
+     <span class="c">
+      # NautilusTrader Strategy subclass
+     </span>
+     │   ├──
+     <span class="f">
+      run_backtest.py
+     </span>
+     <span class="c">
+      # BacktestEngine setup, data loading, run
+     </span>
+     │   └──
+     <span class="f">
+      monthly_loop.py
+     </span>
+     <span class="c">
+      # steps 01–06 from §3
+     </span>
+     ├──
+     <span class="d">
+      accounting/
+     </span>
+     │   ├──
+     <span class="f">
+      ledger.py
+     </span>
+     <span class="c">
+      # fill-level tx_cost and PnL tracking
+     </span>
+     │   ├──
+     <span class="f">
+      stcg.py
+     </span>
+     <span class="c">
+      # annual STCG 20% computation
+     </span>
+     │   └──
+     <span class="f">
+      metrics.py
+     </span>
+     <span class="c">
+      # Sharpe, Beta, WinRate, MAPE computations
+     </span>
+     ├──
+     <span class="d">
+      sentinel/
+     </span>
+     │   └──
+     <span class="f">
+      drift.py
+     </span>
+     <span class="c">
+      # live-vs-backtest drift gate
+     </span>
+     ├──
+     <span class="d">
+      results/
+     </span>
+     │   ├──
+     <span class="f">
+      table1_performance.csv
+     </span>
+     │   ├──
+     <span class="f">
+      table2_cost_decomp.csv
+     </span>
+     │   └──
+     <span class="f">
+      chart_cumreturns.html
+     </span>
+     <span class="c">
+      # Plotly dual-axis chart
+     </span>
+     ├──
+     <span class="f">
+      config.yaml
+     </span>
+     <span class="c">
+      # all constants: tx_rate, stcg_rate, symbols, dates
+     </span>
+     └──
+     <span class="f">
+      requirements.txt
+     </span>
+    </div>
+    <h3>
+     Key library versions
+    </h3>
+    <table class="dt">
+     <tr>
+      <th>
+       Library
+      </th>
+      <th>
+       Version
+      </th>
+      <th>
+       Usage
+      </th>
+     </tr>
+     <tr>
+      <td>
+       nautilus_trader
+      </td>
+      <td>
+       1.224.0
+      </td>
+      <td>
+       Backtest engine, order management, fills
+      </td>
+     </tr>
+     <tr>
+      <td>
+       scikit-learn
+      </td>
+      <td>
+       ≥1.3
+      </td>
+      <td>
+       SVM (SVC), feature scaling, walk-forward CV
+      </td>
+     </tr>
+     <tr>
+      <td>
+       optuna
+      </td>
+      <td>
+       ≥3.0
+      </td>
+      <td>
+       HP search for SVM, CNN-LSTM
+      </td>
+     </tr>
+     <tr>
+      <td>
+       torch / keras
+      </td>
+      <td>
+       ≥2.0
+      </td>
+      <td>
+       CNN-LSTM architecture
+      </td>
+     </tr>
+     <tr>
+      <td>
+       stable-baselines3
+      </td>
+      <td>
+       ≥2.0
+      </td>
+      <td>
+       SAC agent (SB3's SAC class)
+      </td>
+     </tr>
+     <tr>
+      <td>
+       hmmlearn
+      </td>
+      <td>
+       ≥0.3
+      </td>
+      <td>
+       5-state Gaussian HMM
+      </td>
+     </tr>
+     <tr>
+      <td>
+       pandas / numpy
+      </td>
+      <td>
+       ≥2.0
+      </td>
+      <td>
+       Data pipeline, feature engineering
+      </td>
+     </tr>
+     <tr>
+      <td>
+       plotly
+      </td>
+      <td>
+       ≥5.0
+      </td>
+      <td>
+       Interactive dual-axis results chart
+      </td>
+     </tr>
+    </table>
+   </section>
+   <!-- TIMELINE -->
+   <section>
+    <h2>
+     <span class="num">
+      §7
+     </span>
+     Build timeline
+    </h2>
+    <div class="timeline">
+     <div class="tl-time">
+      Week 1–2
+     </div>
+     <div class="tl-event">
+      <b>
+       Data pipeline:
+      </b>
+      load all 10 CSVs + NIFTY50 benchmarks, clean/align to common trading calendar, build feature matrix (25 features), normalise. Validate no NaN, no future leakage.
+     </div>
+     <div class="tl-time">
+      Week 3
+     </div>
+     <div class="tl-event">
+      <b>
+       Regime engine:
+      </b>
+      train 5-state HMM on NIFTY50 (2010–2015 warmup, then 2016–2019 for HP tuning). Build vol-band classifier. Validate regime labels visually against known market events (COVID crash = Crashing, post-COVID rally = Rally).
+     </div>
+     <div class="tl-time">
+      Week 4–5
+     </div>
+     <div class="tl-event">
+      <b>
+       SVM initial training:
+      </b>
+      HP search with Optuna on 2016–2017 data, validate on 2018–2019 (purged walk-forward). Record best C, γ per cap segment.
+     </div>
+     <div class="tl-time">
+      Week 6–7
+     </div>
+     <div class="tl-event">
+      <b>
+       CNN-LSTM initial training:
+      </b>
+      build (batch, 30, 22) tensors, pooled train on 2016–2017, OOS validation on 2018–2019. HP search for lookback, filters, dropout. Per-symbol head fine-tune.
+     </div>
+     <div class="tl-time">
+      Week 8–9
+     </div>
+     <div class="tl-event">
+      <b>
+       SAC initial training:
+      </b>
+      build NautilusTrader gym.Env wrapper, train SAC on simulated 2016–2019 environment, evaluate policy on 2018–2019 hold-out.
+     </div>
+     <div class="tl-time">
+      Week 10
+     </div>
+     <div class="tl-event">
+      <b>
+       Fusion + backtest engine:
+      </b>
+      wire up ensemble vote rule, connect to NautilusTrader strategy, build ledger and cost accounting. Smoke-test Jan 2020 – Mar 2020 (COVID crash stress test).
+     </div>
+     <div class="tl-time">
+      Week 11–12
+     </div>
+     <div class="tl-event">
+      <b>
+       Full backtest Jan 2020 – Jun 2026:
+      </b>
+      run monthly retrain loop end-to-end. Build drift sentinel. Generate Table 1, Table 2, and cumulative return chart.
+     </div>
+     <div class="tl-time">
+      Week 13+
+     </div>
+     <div class="tl-event">
+      <b>
+       Analysis &amp; iteration:
+      </b>
+      analyse per-regime performance breakdown, tune turnover budget, run sensitivity on STCG rate and tx_cost assumptions, write summary report.
+     </div>
+    </div>
+   </section>
+   <footer>
+    <p>
+     <strong>
+      Architecture note.
+     </strong>
+     This is a framework specification. All ranges are starting points from the QBEAST-AI.N calibration report v3 — validate on your own purged walk-forward splits before deploying capital. The 0.11% per-leg cost constant and 20% STCG rate should be verified against the current SEBI/exchange schedule and your tax jurisdiction.
+    </p>
+    <p>
+     <strong>
+      Not financial advice.
+     </strong>
+     A quant engineering reference only. Paper-trade and risk-review before committing capital.
+    </p>
+    <p style="color:var(--faint); font-family:'JetBrains Mono',monospace; font-size:11px; margin-top:12px;">
+     QBEAST-AI.N · SVM + CNN-LSTM + SAC · 10 NSE symbols · 5-state HMM · Jan 2016 – Jun 2026
+    </p>
+   </footer>
+  </div>
+ </body>
+</html>
+
+</body>
+</html>

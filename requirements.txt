@@ -1,0 +1,55 @@
+# ============================================================
+# QBEAST-AI.N  ·  requirements.txt
+# Three-Model Quant Pipeline: SVM + CNN-LSTM + SAC
+# Pinned library versions for reproducibility
+# ============================================================
+
+# ── Core data stack ─────────────────────────────────────────
+numpy>=1.26,<2.1
+pandas>=2.1,<3.0
+pyarrow>=14.0          # parquet read/write for processed features
+
+# ── Scientific computing ────────────────────────────────────
+scipy>=1.11            # used by hmmlearn internals
+
+# ── ML  (Week 4–5: SVM) ─────────────────────────────────────
+scikit-learn>=1.4,<2.0 # SVC, StandardScaler, TimeSeriesSplit
+
+# ── Hyperparameter optimisation (Weeks 4–7) ─────────────────
+optuna>=3.5            # HP search for SVM + CNN-LSTM
+
+# ── Regime engine (Week 3) ──────────────────────────────────
+hmmlearn>=0.3.2        # 5-state Gaussian HMM
+
+# ── Deep learning (Week 6–7: CNN-LSTM) ──────────────────────
+torch>=2.2,<3.0        # CNN-LSTM architecture
+# Alternative: uncomment keras if using TF backend
+# tensorflow>=2.15
+# keras>=3.0
+
+# ── Reinforcement learning (Week 8–9: SAC) ──────────────────
+stable-baselines3>=2.2 # SAC agent
+gymnasium>=0.29        # gym.Env base class (SB3 v2 uses gymnasium)
+
+# ── Backtesting engine (Week 10+) ───────────────────────────
+# NautilusTrader — install separately; binary wheels only
+# pip install nautilus_trader==1.224.0
+# (not listed here because it requires Rust toolchain on some platforms)
+
+# ── Visualisation & reporting ───────────────────────────────
+plotly>=5.18           # interactive dual-axis results chart
+matplotlib>=3.8        # static charts + regime band overlays
+
+# ── Configuration & utilities ───────────────────────────────
+pyyaml>=6.0            # config.yaml parsing
+tqdm>=4.66             # progress bars during retrain loop
+joblib>=1.3            # parallel feature engineering
+
+# ── Development & testing ───────────────────────────────────
+pytest>=8.0
+pytest-cov>=4.1
+ipykernel>=6.29        # Jupyter notebook support
+jupyter>=1.0
+
+# ── Optional: faster parquet with snappy compression ────────
+python-snappy>=0.6     # optional; speeds up parquet I/O on large feature matrices
