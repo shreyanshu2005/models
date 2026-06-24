@@ -1,10 +1,51 @@
 {
   "week": "2-3",
   "regime_validation": {
-    "events": {},
-    "state_distribution": {}
+    "events": {
+      "2020-03-01\u21922020-03-31": {
+        "dominant_state": "Falling",
+        "expected": [
+          "Falling",
+          "Crashing"
+        ],
+        "pass": true
+      },
+      "2020-04-01\u21922020-12-31": {
+        "dominant_state": "Sideways",
+        "expected": [
+          "Rising",
+          "Rally"
+        ],
+        "pass": false
+      },
+      "2021-01-01\u21922021-12-31": {
+        "dominant_state": "Sideways",
+        "expected": [
+          "Rising",
+          "Rally"
+        ],
+        "pass": false
+      },
+      "2022-02-01\u21922022-03-31": {
+        "dominant_state": "Rally",
+        "expected": [
+          "Sideways",
+          "Falling"
+        ],
+        "pass": false
+      }
+    },
+    "state_distribution": {
+      "Rising": 1255,
+      "Rally": 1135,
+      "Sideways": 1700,
+      "Falling": 510,
+      "Crashing": 843
+    },
+    "checks_passed": 1,
+    "checks_failed": 3
   },
-  "feature_audit_path": "D:\\qbeast_tri_model\\results\\feature_audit.csv",
+  "feature_audit_path": "D:\\qbeast_tri_model\\results\\feature_audit_with_regime.csv",
   "svm_registry_path": "D:\\qbeast_tri_model\\results\\svm_registry_initial.pkl",
   "symbols": [
     "RELIANCE",
@@ -18,5 +59,7 @@
     "BRITANNIA",
     "INDIGO"
   ],
-  "train_period": "2016-01-01 \u2192 2017-12-31 (HP search) | 2018-01-01 \u2192 2019-12-31 (OOS val)"
+  "regime_labels_path": "D:\\qbeast_tri_model\\data\\regime\\regime_labels.parquet",
+  "train_period": "2016-01-01 \u2192 2017-12-31 (HP search) | 2018-01-01 \u2192 2019-12-31 (OOS val)",
+  "regime_feature_wired": true
 }
