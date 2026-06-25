@@ -1,0 +1,83 @@
+{
+  "pipeline": "QBEAST-AI.N",
+  "week": "6-7",
+  "model": "CNN-LSTM",
+  "device": "cpu",
+  "train_start": "2016-01-01",
+  "train_end": "2017-12-31",
+  "val_start": "2018-02-14",
+  "val_end": "2019-12-31",
+  "architecture": {
+    "input_channels": 22,
+    "lookback": 30,
+    "conv_filters": [
+      64,
+      128
+    ],
+    "lstm_hidden": 128
+  },
+  "symbols": {
+    "HDFCBANK": {
+      "symbol": "HDFCBANK",
+      "cap": "LC",
+      "val_f1_oos": 0.3278,
+      "model_path": "D:\\qbeast_tri_model\\results\\cnn_lstm\\cnn_lstm_HDFCBANK.pt"
+    },
+    "BAJFINANCE": {
+      "symbol": "BAJFINANCE",
+      "cap": "LC",
+      "val_f1_oos": 0.3646,
+      "model_path": "D:\\qbeast_tri_model\\results\\cnn_lstm\\cnn_lstm_BAJFINANCE.pt"
+    },
+    "RELIANCE": {
+      "symbol": "RELIANCE",
+      "cap": "LC",
+      "val_f1_oos": 0.3874,
+      "model_path": "D:\\qbeast_tri_model\\results\\cnn_lstm\\cnn_lstm_RELIANCE.pt"
+    },
+    "BRITANNIA": {
+      "symbol": "BRITANNIA",
+      "cap": "MC",
+      "val_f1_oos": 0.4103,
+      "model_path": "D:\\qbeast_tri_model\\results\\cnn_lstm\\cnn_lstm_BRITANNIA.pt"
+    },
+    "INDIGO": {
+      "symbol": "INDIGO",
+      "cap": "MC",
+      "val_f1_oos": 0.3118,
+      "model_path": "D:\\qbeast_tri_model\\results\\cnn_lstm\\cnn_lstm_INDIGO.pt"
+    },
+    "ABB": {
+      "symbol": "ABB",
+      "cap": "MC",
+      "val_f1_oos": 0.3436,
+      "model_path": "D:\\qbeast_tri_model\\results\\cnn_lstm\\cnn_lstm_ABB.pt"
+    },
+    "MOTHERSON": {
+      "symbol": "MOTHERSON",
+      "cap": "MC",
+      "val_f1_oos": 0.3145,
+      "model_path": "D:\\qbeast_tri_model\\results\\cnn_lstm\\cnn_lstm_MOTHERSON.pt"
+    },
+    "HEROMOTOCO": {
+      "symbol": "HEROMOTOCO",
+      "cap": "LC",
+      "val_f1_oos": 0.3613,
+      "model_path": "D:\\qbeast_tri_model\\results\\cnn_lstm\\cnn_lstm_HEROMOTOCO.pt"
+    },
+    "BOSCHLTD": {
+      "symbol": "BOSCHLTD",
+      "cap": "MC",
+      "val_f1_oos": 0.3853,
+      "model_path": "D:\\qbeast_tri_model\\results\\cnn_lstm\\cnn_lstm_BOSCHLTD.pt"
+    },
+    "MARUTI": {
+      "symbol": "MARUTI",
+      "cap": "LC",
+      "val_f1_oos": 0.4082,
+      "model_path": "D:\\qbeast_tri_model\\results\\cnn_lstm\\cnn_lstm_MARUTI.pt"
+    }
+  },
+  "backbone_path": "D:\\qbeast_tri_model\\results\\cnn_lstm\\cnn_lstm_backbone.pt",
+  "registry_path": "D:\\qbeast_tri_model\\results\\cnn_lstm\\cnn_lstm_registry.pkl"
+}
